@@ -181,7 +181,7 @@ def sac(env, test_env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=
 
     # Set up function for computing SAC Q-losses
     def compute_loss_q(data):
-        o, a, r, o2, d = data['obs'], data['act'], data['rew'], data['obs2'], data['done']
+        o, a, r, o2 = data['obs'], data['act'], data['rew'], data['obs2']
 
         q1 = ac.q1(o,a)
         q2 = ac.q2(o,a)
@@ -284,7 +284,7 @@ def sac(env, test_env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=
                 ep_ret += r
                 ep_len += 1
             logger.store(TestEpRet=ep_ret, TestEpLen=ep_len)
-            rospy.loginfo("# /// Deterministic Test Reward /// => {}".format(ep_ret))
+            print("# /// Deterministic Test Reward /// => {}".format(ep_ret))
 
     # Prepare for interaction with environment
     total_steps = steps_per_epoch * epochs
@@ -314,7 +314,7 @@ def sac(env, test_env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=
         d = False if ep_len==max_ep_len else d
 
         # Store experience to replay buffer
-        replay_buffer.store(o, a, r, o2, d)
+        replay_buffer.store(o, a, r, o2)
 
         # Super critical, easy to overlook step: make sure to update 
         # most recent observation!
@@ -324,16 +324,16 @@ def sac(env, test_env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=
         if d or (ep_len == max_ep_len):
             logger.store(EpRet=ep_ret, EpLen=ep_len)
             if d:
-                rospy.loginfo("EPISODE FINISHED BY DONE FLAG")
-                rospy.loginfo("# FINAL episode length => {}".format(ep_len))
-                rospy.loginfo("# FINAL episode cumulated reward => {}".format(ep_ret))
+                print("EPISODE FINISHED BY DONE FLAG")
+                print("# FINAL episode length => {}".format(ep_len))
+                print("# FINAL episode cumulated reward => {}".format(ep_ret))
                 #logger.store(TimeToGoal=ep_len)
             else:
-                rospy.loginfo("EPISODE FINISHED BY TIMEOUT")
-                rospy.loginfo("# FINAL episode length => {}".format(ep_len))
-                rospy.loginfo("# FINAL episode cumulated reward => {}".format(ep_ret))
+                print("EPISODE FINISHED BY TIMEOUT")
+                print("# FINAL episode length => {}".format(ep_len))
+                print("# FINAL episode cumulated reward => {}".format(ep_ret))
             highest_reward = max(highest_reward, ep_ret)
-            rospy.loginfo("# Highest reward yet => {}".format(highest_reward))
+            print("# Highest reward yet => {}".format(highest_reward))
                 
             o, ep_ret, ep_len = env.reset(), 0, 0
 
