@@ -1,0 +1,3 @@
+*.pyc
+RL/RL_solo.egg-info/*
+RL/RL_solo/training/training_results/*

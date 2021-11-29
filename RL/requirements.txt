@@ -11,3 +11,5 @@ lz4
 gym
 box2d-py
 ale-py
+pyyaml
+torch
