@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from gym.envs.mujoco import mujoco_env
 from gym import utils
@@ -9,10 +10,13 @@ DEFAULT_CAMERA_CONFIG = {
     "elevation": -20.0,
 }
 
+path = os.path.dirname(os.path.abspath(__file__))
+print(path)
+
 class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def __init__(
         self,
-        xml_file="/home/ubuntu/PIE/pie-solo-2122/RL/RL_solo/models/solo_description/robots/solo12.xml",
+        xml_file= path + "/../models/solo_description/robots/solo12.xml",
         forward_reward_weight=1.0,
         ctrl_cost_weight=1e-3,
         healthy_reward=1.0,
