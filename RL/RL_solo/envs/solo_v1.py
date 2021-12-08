@@ -76,7 +76,7 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             print(healthy_state)
             print(healthy_z)
             print(healthy_angle)
-        is_healthy = all((healthy_state, healthy_z, healthy_angle))
+        is_healthy = all((healthy_state, healthy_z))
 
         return is_healthy
 
