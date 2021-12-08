@@ -12,14 +12,14 @@ DEFAULT_CAMERA_CONFIG = {
 class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def __init__(
         self,
-        xml_file="hopper.xml",
+        xml_file="/home/ubuntu/PIE/pie-solo-2122/RL/RL_solo/models/solo_description/robots/solo12.xml",
         forward_reward_weight=1.0,
         ctrl_cost_weight=1e-3,
         healthy_reward=1.0,
         terminate_when_unhealthy=True,
         healthy_state_range=(-100.0, 100.0),
-        healthy_z_range=(0.7, float("inf")),
-        healthy_angle_range=(-0.2, 0.2),
+        healthy_z_range=(-.1, float("inf")),
+        healthy_angle_range=(-.2, .2),
         reset_noise_scale=5e-3,
         exclude_current_positions_from_observation=True,
     ):
@@ -59,7 +59,7 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def is_healthy(self):
         z, angle = self.sim.data.qpos[1:3]
         state = self.state_vector()[2:]
-
+        
         min_state, max_state = self._healthy_state_range
         min_z, max_z = self._healthy_z_range
         min_angle, max_angle = self._healthy_angle_range
@@ -68,6 +68,10 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         healthy_z = min_z < z < max_z
         healthy_angle = min_angle < angle < max_angle
 
+        if False:
+            print(healthy_state)
+            print(healthy_z)
+            print(healthy_angle)
         is_healthy = all((healthy_state, healthy_z, healthy_angle))
 
         return is_healthy
