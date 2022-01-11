@@ -11,7 +11,6 @@ DEFAULT_CAMERA_CONFIG = {
 }
 
 path = os.path.dirname(os.path.abspath(__file__))
-print(path)
 
 class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def __init__(
@@ -20,7 +19,7 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         forward_reward_weight=1.0,
         ctrl_cost_weight=1e-3,
         healthy_reward=1.0,
-        terminate_when_unhealthy=True,
+        terminate_when_unhealthy=False,
         healthy_z_range=(-.1, float("inf")),
         healthy_angle_range=(-3.15,3.15), #TBD
         healthy_angle_vel_range=(-float("inf"),float("inf")), #TBD
@@ -39,6 +38,8 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self._healthy_z_range = healthy_z_range
         self._healthy_angle_range = healthy_angle_range
         self._healthy_angle_vel_range = healthy_angle_vel_range
+
+        self.lift_flag = False
 
         self._reset_noise_scale = reset_noise_scale
 
@@ -114,18 +115,31 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         observation = np.concatenate((position, velocity)).ravel()
         return observation
 
+    def _compute_reward(self):
+        healthy_reward = self.healthy_reward
+        z, angle = self.sim.data.qpos[1:3]
+        jump_reward = 0
+        if self.sim.data.ncon == 0:
+            if self.lift_flag :
+                jump_reward += z
+            else :
+                self.lift_flag = True
+                jump_reward += 100
+
+        return healthy_reward + jump_reward
     def step(self, action):
+        self.frame_skip = 200
         x_position_before = self.sim.data.qpos[0]
         self.do_simulation(action, self.frame_skip)
+        self.render()
         x_position_after = self.sim.data.qpos[0]
         x_velocity = (x_position_after - x_position_before) / self.dt
-
         ctrl_cost = self.control_cost(action)
 
-        forward_reward = self._forward_reward_weight * x_velocity
+        jump_reward = self._forward_reward_weight * x_velocity
         healthy_reward = self.healthy_reward
 
-        rewards = forward_reward + healthy_reward
+        rewards = jump_reward + healthy_reward
         costs = ctrl_cost
 
         observation = self._get_obs()
