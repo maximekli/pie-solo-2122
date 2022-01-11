@@ -20,9 +20,9 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         ctrl_cost_weight=1e-3,
         healthy_reward=1.0,
         terminate_when_unhealthy=False,
-        healthy_state_range=(-100.0, 100.0),
         healthy_z_range=(-.1, float("inf")),
-        healthy_angle_range=(-.2, .2),
+        healthy_angle_range=(-3.15,3.15), #TBD
+        healthy_angle_vel_range=(-float("inf"),float("inf")), #TBD
         reset_noise_scale=5e-3,
         exclude_current_positions_from_observation=True,
     ):
@@ -35,9 +35,9 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         self._healthy_reward = healthy_reward
         self._terminate_when_unhealthy = terminate_when_unhealthy
 
-        self._healthy_state_range = healthy_state_range
         self._healthy_z_range = healthy_z_range
         self._healthy_angle_range = healthy_angle_range
+        self._healthy_angle_vel_range = healthy_angle_vel_range
 
         self.lift_flag = False
 
@@ -62,22 +62,35 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
     @property
     def is_healthy(self):
-        z, angle = self.sim.data.qpos[1:3]
-        state = self.state_vector()[2:]
-        
-        min_state, max_state = self._healthy_state_range
+        """
+            qpos =  x,y,z,
+                    quaternion for body orientation,
+                    joints angles,
+            qvel =  vx,vy,vz,
+                    roll, pitch, yaw,
+                    joints angular velocity
+        """
+        pos_body = self.sim.data.qpos[:3]
+        # orientation = self.sim.data.qpos[3:7]
+        pos_joints = self.sim.data.qpos[7:]
+        # vel_body = self.sim.data.qvel[:3]
+        # rot_body = self.sim.data.qvel[3:6]
+        vel_joints = self.sim.data.qvel[6:]
+
         min_z, max_z = self._healthy_z_range
         min_angle, max_angle = self._healthy_angle_range
+        min_angle_vel, max_angle_vel = self._healthy_angle_vel_range
 
-        healthy_state = np.all(np.logical_and(min_state < state, state < max_state))
-        healthy_z = min_z < z < max_z
-        healthy_angle = min_angle < angle < max_angle
+        healthy_z = min_z < pos_body[-1] < max_z
+        healthy_joints_pos = np.all(np.logical_and(min_angle < pos_joints, pos_joints < max_angle))
+        healthy_joints_vel = np.all(np.logical_and(min_angle_vel < vel_joints, vel_joints < max_angle_vel))
 
         if False:
-            print(healthy_state)
-            print(healthy_z)
-            print(healthy_angle)
-        is_healthy = all((healthy_state, healthy_z))
+            print("healthy_z: ", healthy_z)
+            print("healthy_joints_pos: ", healthy_joints_pos)
+            print("healthy_joints_vel: ", healthy_joints_vel)
+
+        is_healthy = all((healthy_joints_pos, healthy_z,healthy_joints_vel))
 
         return is_healthy
 
@@ -87,6 +100,12 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         return done
 
     def _get_obs(self):
+        """
+        observation =   [
+                        pos with or without current position,
+                        vel(clipped at -10, 10)
+                        ]
+        """
         position = self.sim.data.qpos.flat.copy()
         velocity = np.clip(self.sim.data.qvel.flat.copy(), -10, 10)
 
