@@ -94,28 +94,18 @@
         </body>
     </worldbody>
     <actuator>
-<<<<<<< HEAD
-        <position kp="8" ctrllimited="true" ctrlrange="-1.0 1.0" gear="1.5" joint="FL_HAA"/>
-        <position kp="8" ctrllimited="true" ctrlrange="-1.0 1.0" gear="1" joint="FL_HFE"/>
-        <position kp="8" ctrllimited="true" ctrlrange="-1.0 1.0" gear="1" joint="FL_KFE"/>
-        <position kp="8" ctrllimited="true" ctrlrange="-1.0 1.0" gear="1.5" joint="FR_HAA"/>
-        <position kp="8" ctrllimited="true" ctrlrange="-1.0 1.0" gear="1" joint="FR_HFE"/>
-        <position kp="8" ctrllimited="true" ctrlrange="-1.0 1.0" gear="1" joint="FR_KFE"/>
-=======
         <position kp="8" ctrllimited="true" ctrlrange="-3.14 3.14" gear="1.5" joint="FL_HAA"/>
         <position kp="8" ctrllimited="true" ctrlrange="-3.14 3.14" gear="1" joint="FL_HFE"/>
         <position kp="8" ctrllimited="true" ctrlrange="-3.14 3.14" gear="1" joint="FL_KFE"/>
         <position kp="8" ctrllimited="true" ctrlrange="-3.14 3.14" gear="1.5" joint="FR_HAA"/>
         <position kp="8" ctrllimited="true" ctrlrange="-3.14 3.14" gear="1" joint="FR_HFE"/>
         <position kp="8" ctrllimited="true" ctrlrange="-3.14 3.14" gear="1" joint="FR_KFE"/>
->>>>>>> f44cafb11d15cfb35a34cd613a43e5449f7aeb65
         <position kp="8" ctrllimited="true" ctrlrange="-1.0 1.0" gear="1.5" joint="HL_HAA"/>
         <position kp="8" ctrllimited="true" ctrlrange="-1.0 1.0" gear="1" joint="HL_HFE"/>
         <position kp="8" ctrllimited="true" ctrlrange="-1.0 1.0" gear="1" joint="HL_KFE"/>
         <position kp="8" ctrllimited="true" ctrlrange="-1.0 1.0" gear="1.5" joint="HR_HAA"/>
         <position kp="8" ctrllimited="true" ctrlrange="-1.0 1.0" gear="1" joint="HR_HFE"/>
         <position kp="8" ctrllimited="true" ctrlrange="-1.0 1.0" gear="1" joint="HR_KFE"/>
-<<<<<<< HEAD
 
         <velocity kv="0.06" ctrllimited="true" ctrlrange="-1.0 1.0" gear="1" joint="FL_HAA"/>
         <velocity kv="0.06" ctrllimited="true" ctrlrange="-1.0 1.0" gear="1" joint="FL_HFE"/>
@@ -129,20 +119,6 @@
         <velocity kv="0.06" ctrllimited="true" ctrlrange="-1.0 1.0" gear="1" joint="HR_HAA"/>
         <velocity kv="0.06" ctrllimited="true" ctrlrange="-1.0 1.0" gear="1" joint="HR_HFE"/>
         <velocity kv="0.06" ctrllimited="true" ctrlrange="-1.0 1.0" gear="1" joint="HR_KFE"/>
-=======
-        <velocity kv="0.06" ctrllimited="true" ctrlrange="-1.0 1.0" gear="0.1" joint="FL_HAA"/>
-        <velocity kv="0.06" ctrllimited="true" ctrlrange="-1.0 1.0" gear="0.1" joint="FL_HFE"/>
-        <velocity kv="0.06" ctrllimited="true" ctrlrange="-1.0 1.0" gear="0.1" joint="FL_KFE"/>
-        <velocity kv="0.06" ctrllimited="true" ctrlrange="-1.0 1.0" gear="0.1" joint="FR_HAA"/>
-        <velocity kv="0.06" ctrllimited="true" ctrlrange="-1.0 1.0" gear="0.1" joint="FR_HFE"/>
-        <velocity kv="0.06" ctrllimited="true" ctrlrange="-1.0 1.0" gear="0.1" joint="FR_KFE"/>
-        <velocity kv="0.06" ctrllimited="true" ctrlrange="-1.0 1.0" gear="0.1" joint="HL_HAA"/>
-        <velocity kv="0.06" ctrllimited="true" ctrlrange="-1.0 1.0" gear="0.1" joint="HL_HFE"/>
-        <velocity kv="0.06" ctrllimited="true" ctrlrange="-1.0 1.0" gear="0.1" joint="HL_KFE"/>
-        <velocity kv="0.06" ctrllimited="true" ctrlrange="-1.0 1.0" gear="0.1" joint="HR_HAA"/>
-        <velocity kv="0.06" ctrllimited="true" ctrlrange="-1.0 1.0" gear="0.1" joint="HR_HFE"/>
-        <velocity kv="0.06" ctrllimited="true" ctrlrange="-1.0 1.0" gear="0.1" joint="HR_KFE"/>
->>>>>>> f44cafb11d15cfb35a34cd613a43e5449f7aeb65
   </actuator>
   <asset>
         <mesh name="solo_12_base" file="solo_12_base.stl" />
