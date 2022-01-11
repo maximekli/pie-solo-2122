@@ -97,19 +97,24 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         return observation
 
     def _compute_reward(self):
-        healthy_reward = self.healthy_reward
         z, angle = self.sim.data.qpos[1:3]
         jump_reward = 0
-        if self.sim.data.ncon == 0:
+        if self.sim.data.ncon == 4 :
+            jump_reward += 10
+
+        """ if self.sim.data.ncon == 0:
             if self.lift_flag :
-                jump_reward += z
+                jump_reward += z*5
             else :
                 self.lift_flag = True
                 jump_reward += 100
+        """
+        jump_reward += z
+        return jump_reward
 
-        return healthy_reward + jump_reward
+
     def step(self, action):
-        self.frame_skip = 200
+        #self.frame_skip = 50
         x_position_before = self.sim.data.qpos[0]
         self.do_simulation(action, self.frame_skip)
         self.render()
@@ -120,7 +125,7 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         jump_reward = self._forward_reward_weight * x_velocity
         healthy_reward = self.healthy_reward
 
-        rewards = jump_reward + healthy_reward
+        rewards = self._compute_reward()
         costs = ctrl_cost
 
         observation = self._get_obs()

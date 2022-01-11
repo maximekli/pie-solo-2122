@@ -2,7 +2,7 @@ task_and_robot_environment_name: 'solo-v1'
 seed: 1
 hid: [32,32]
 l: 2
-steps_per_epoch: 500
+steps_per_epoch: 10
 n_epochs: 100
 replay_size: 1000000
 gamma: 0.99
@@ -14,5 +14,5 @@ start_steps: 5000
 update_after: 1000
 update_every: 50
 num_test_episodes: 1
-max_ep_len: 25
+max_ep_len: 250
 save_freq: 20
