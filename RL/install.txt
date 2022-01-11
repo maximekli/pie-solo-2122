@@ -64,3 +64,13 @@ pip3 install -r requirements.txt
 
 ## If error on build of box2d, do:
 sudo apt-get install swig build-essential python-dev python3-dev
+
+## Install spinningup
+
+Clone the repository here : https://github.com/openai/spinningup
+Modifier setup.py -> enlever tensorflow et enlever me = t ce qu'il y a après pour torch
+executer setup.py
+-> aller dans spinup et modifier __init__.py pour mettre tout les algos avec un tf dans un if False: ils sont bugés
+retourner dans la racine de spinningup et faire pwd pour avoir le path du dossier
+avant de lancer main faire " export PYTHONPATH=$PYTHONPATH:PATH_SPINNINGUP"
+maintenant on peut lancer main.py pour train le robot ^^
