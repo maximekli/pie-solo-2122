@@ -68,7 +68,7 @@ sudo apt-get install swig build-essential python-dev python3-dev
 ## Install spinningup
 
 Clone the repository here : https://github.com/openai/spinningup
-Modifier setup.py -> enlever tensorflow et enlever me = t ce qu'il y a après pour torch
+Modifier setup.py -> enlever me = t ce qu'il y a après pour torch / ou enlever torch s'il a déjà été installé (pour gym par exemple)
 executer setup.py
 -> aller dans spinup et modifier __init__.py pour mettre tout les algos avec un tf dans un if False: ils sont bugés
 retourner dans la racine de spinningup et faire pwd pour avoir le path du dossier

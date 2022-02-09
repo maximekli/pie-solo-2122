@@ -13,9 +13,14 @@ for i_episode in range(100):
     for t in range(200*5):
         env.render()
         #print(observation)
+
         a = [0, 0, 0]
-        action = np.concatenate([a,a,a,a ,np.zeros(12)]) #env.action_space.sample()
+        # action for actuators of type PD
+        # action = np.concatenate([a,a,a,a ,np.zeros(12)]) #env.action_space.sample()
+        # action for actuators of type motor
+        action = np.concatenate([a,a,a,a])
         #print(action)
+        
         observation, reward, done, info = env.step(action)
         if done:
             print("Episode finished after {} timesteps".format(t+1))
