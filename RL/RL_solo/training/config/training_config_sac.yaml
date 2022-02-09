@@ -2,8 +2,8 @@ task_and_robot_environment_name: 'solo-v1'
 seed: 1
 hid: [32,32]
 l: 2
-steps_per_epoch: 1000
-n_epochs: 100
+steps_per_epoch: 10000 #1000
+n_epochs: 10 #100
 replay_size: 1000000
 gamma: 0.99
 polyak: 0.995
