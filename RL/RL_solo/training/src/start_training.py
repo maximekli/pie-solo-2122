@@ -5,7 +5,7 @@ import pathlib
 import numpy as np
 
 from spinup.algos.pytorch.sac import core
-from .sac import sac
+from .sac import sac, MLPActorCriticSym
 from spinup.utils.run_utils import setup_logger_kwargs
 
 def training():
@@ -68,7 +68,7 @@ def training():
 
     sac(env=env, 
         test_env = env,
-        actor_critic=core.MLPActorCritic,
+        actor_critic=MLPActorCriticSym, #core.MLPActorCritic
         ac_kwargs=dict(hidden_sizes=hid*l),
         seed=seed, 
         steps_per_epoch=steps_per_epoch, 
@@ -85,5 +85,6 @@ def training():
         num_test_episodes=num_test_episodes, 
         max_ep_len=max_ep_len, 
         logger_kwargs=logger_kwargs, 
-        save_freq=save_freq)
+        save_freq=save_freq,
+        symmetry=True)
     env.close()

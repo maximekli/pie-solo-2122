@@ -9,6 +9,29 @@ import spinup.algos.pytorch.sac.core as core
 from spinup.utils.logx import EpochLogger
 
 
+class MLPActorCriticSym(torch.nn.Module):
+
+    def __init__(self, observation_space, action_space, hidden_sizes=(256,256),
+                 activation=torch.nn.ReLU):
+        super().__init__()
+
+        obs_dim = observation_space.shape[0] #- 12
+        act_dim = action_space.shape[0]//2
+        act_limit = action_space.high[0]
+
+        # build policy and value functions
+        self.pi = core.SquashedGaussianMLPActor(obs_dim, act_dim, hidden_sizes, activation, act_limit)
+        self.q1 = core.MLPQFunction(obs_dim, act_dim, hidden_sizes, activation)
+        self.q2 = core.MLPQFunction(obs_dim, act_dim, hidden_sizes, activation)
+
+    def act(self, obs, deterministic=False):
+        #obs2 = list(np.concatenate([obs[:13],obs[19+6:19+6+6]]))
+        with torch.no_grad():
+            a, _ = self.pi(obs, deterministic, False)
+            a = np.concatenate([a.numpy(),a.numpy()])
+            #a = torch.from_numpy(a)
+            return a
+
 class ReplayBuffer:
     """
     A simple FIFO experience replay buffer for SAC agents.
@@ -43,7 +66,7 @@ def sac(env, test_env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=
         steps_per_epoch=4000, epochs=100, replay_size=int(1e6), gamma=0.99, 
         polyak=0.995, lr=1e-3, alpha=0.2, batch_size=100, start_steps=10000, 
         update_after=1000, update_every=50, num_test_episodes=10, max_ep_len=1000, 
-        logger_kwargs=dict(), save_freq=1, load=False):
+        logger_kwargs=dict(), save_freq=1, load=False, symmetry=False):
     """
     Soft Actor-Critic (SAC)
 
@@ -183,6 +206,8 @@ def sac(env, test_env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=
     def compute_loss_q(data):
         o, a, r, o2 = data['obs'], data['act'], data['rew'], data['obs2']
 
+        if symmetry:
+            a = a[:,:env.action_space.shape[0]//2]
         q1 = ac.q1(o,a)
         q2 = ac.q2(o,a)
 
@@ -302,6 +327,9 @@ def sac(env, test_env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=
             a = get_action(o)
         else:
             a = env.action_space.sample()
+            if symmetry:
+                a_left = a[:env.action_space.shape[0]//2]
+                a = np.concatenate([a_left,a_left])
 
         # Step the env
         o2, r, d, _ = env.step(a)
