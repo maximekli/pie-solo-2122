@@ -16,7 +16,7 @@ def rotation_matrix(alpha, beta, gamma):
     R_z = np.array([[np.cos(alpha) ,-np.sin(alpha) ,0],
                     [np.sin(alpha) ,np.cos(alpha)  ,0],
                     [0             ,0              ,1]])
-    return R_z.dot(R_y.dot(R_x))
+    return np.around(R_z.dot(R_y.dot(R_x)), decimals=10)
 
 class SimpleQuadrupedalGaitProblem(SimpleQuadrupedalGaitProblem):
     def createMySwingFootModel(self, timeStep, supportFootIds, comTask=None, rotationTask=None, swingFootTask=None):
@@ -24,6 +24,7 @@ class SimpleQuadrupedalGaitProblem(SimpleQuadrupedalGaitProblem):
         :param timeStep: step duration of the action model
         :param supportFootIds: Ids of the constrained feet
         :param comTask: CoM task
+        :param rotationTask: base_link rotation task
         :param swingFootTask: swinging foot task
         :return action model for a swing foot phase
         """
@@ -48,7 +49,7 @@ class SimpleQuadrupedalGaitProblem(SimpleQuadrupedalGaitProblem):
                                                                     rotationTask,
                                                                     nu)
             rotationTrack = crocoddyl.CostModelResidual(self.state, rotationResidual)
-            costModel.addCost("rotationTrack", rotationTrack, 1e6)
+            costModel.addCost("rotationTrack", rotationTrack, 1e3)
         for i in supportFootIds:
             cone = crocoddyl.FrictionCone(self.Rsurf, self.mu, 4, False)
             coneResidual = crocoddyl.ResidualModelContactFrictionCone(self.state, i, cone, nu)
@@ -62,7 +63,7 @@ class SimpleQuadrupedalGaitProblem(SimpleQuadrupedalGaitProblem):
                                                                                     i[1].translation,
                                                                                     nu)
                 footTrack = crocoddyl.CostModelResidual(self.state, frameTranslationResidual)
-                costModel.addCost(self.rmodel.frames[i[0]].name + "_footTrack", footTrack, 1e6)
+                costModel.addCost(self.rmodel.frames[i[0]].name + "_footTrack", footTrack, 1e3)
 
         # stateWeights = np.array([10.] * self.rmodel.nv + [10.] * self.rmodel.nv)
         stateWeights = np.array([1.] * 3 + [1.] * 3 + [1.] * (self.rmodel.nv - 6) + [100.] * 6 + [100.] * (self.rmodel.nv - 6))
@@ -106,31 +107,15 @@ class SimpleQuadrupedalGaitProblem(SimpleQuadrupedalGaitProblem):
         costModel = crocoddyl.CostModelSum(self.state, 0)
         if swingFootTask is not None:
             for i in swingFootTask:
-                # framePlacementResidual = crocoddyl.ResidualModelFramePlacement(
-                #     self.state,
-                #     i[0],
-                #     i[1],
-                #     0)
-                # placTrack = crocoddyl.CostModelResidual(self.state, framePlacementResidual)
-                # costModel.addCost(self.rmodel.frames[i[0]].name + "_placTrack", placTrack, 1e8)
-
                 frameTranslationResidual = crocoddyl.ResidualModelFrameTranslation(
                     self.state,
                     i[0],
                     i[1].translation,
                     0)
                 footTrack = crocoddyl.CostModelResidual(self.state, frameTranslationResidual)
-                costModel.addCost(self.rmodel.frames[i[0]].name + "_transTrack", footTrack, 1e7)
+                costModel.addCost(self.rmodel.frames[i[0]].name + "_transTrack", footTrack, 1e3)
 
-                # frameRotationResidual = crocoddyl.ResidualModelFrameRotation(
-                #     self.state,
-                #     i[0],
-                #     i[1].rotation,
-                #     0)
-                # rotationTrack = crocoddyl.CostModelResidual(self.state, frameRotationResidual)
-                # costModel.addCost(self.rmodel.frames[i[0]].name + "_rotTrack", rotationTrack, 1e8)
-
-        stateWeights = np.array([1.] * self.rmodel.nv + [1.] * self.rmodel.nv)
+        stateWeights = np.array([10.] * self.rmodel.nv + [1.] * self.rmodel.nv)
         stateResidual = crocoddyl.ResidualModelState(self.state, self.rmodel.defaultState, 0)
         stateActivation = crocoddyl.ActivationModelWeightedQuad(stateWeights**2)
         stateReg = crocoddyl.CostModelResidual(self.state, stateActivation, stateResidual)
@@ -192,8 +177,7 @@ class SimpleQuadrupedalGaitProblem(SimpleQuadrupedalGaitProblem):
                     self.rhFootId]
         Pos0 = np.array([self.rdata.oMf[frameId].translation for frameId in framesId])
         Pos1 = np.array([Pos0[i] + f0 for i, frameId in enumerate(framesId)])
-        Rot0 = np.array([self.rdata.oMf[frameId].rotation for frameId in framesId])
-        footTask = [[framesId[i], pinocchio.SE3(Rot0[i], Pos1[i])] for i in range(len(framesId))]
+        footTask = [[framesId[i], pinocchio.SE3(np.eye(3), Pos1[i])] for i in range(len(framesId))]
         landingPhase = [
             self.createMyImpulseModel(
                 [self.lfFootId, self.rfFootId, self.lhFootId, self.rhFootId],
@@ -270,14 +254,10 @@ class SimpleQuadrupedalGaitProblem(SimpleQuadrupedalGaitProblem):
                     self.rfFootId,
                     self.lhFootId,
                     self.rhFootId]
-        # framesName = [frame.name for frame in self.rmodel.frames.tolist()]
-        # framesId = [self.rmodel.getFrameId(frameName) for frameName in framesName]
 
         Pos0 = np.array([self.rdata.oMf[frameId].translation for frameId in framesId])
         Pos1 = np.array([rotationTask.dot(Pos0[i]-comRef)+comRef for i, frameId in enumerate(framesId)])
-        Rot0 = np.array([self.rdata.oMf[frameId].rotation for frameId in framesId])
-        Rot1 = np.array([rotationTask.dot(Rot0[i]) for i, frameId in enumerate(framesId)])
-        PosTask = [[framesId[i], pinocchio.SE3(Rot1[i], Pos1[i])] for i in range(len(framesId))]
+        PosTask = [[framesId[i], pinocchio.SE3(np.eye(3), Pos1[i])] for i in range(len(framesId))]
 
         landingPhase = [
             self.createMyImpulseModel(
@@ -344,7 +324,7 @@ class SimpleQuadrupedalGaitProblem(SimpleQuadrupedalGaitProblem):
             self.createMySwingFootModel(
                 timeStep,
                 [], # No support foot
-                comTask=comTask * (k+1)/flyingKnots + comRef,
+                comTask=None,#comTask * (k+1)/flyingKnots + comRef,
                 rotationTask=rotation_matrix(0, rot*(k+1)/(2*flyingKnots), 0).dot(rotationRef)
             ) for k in range(flyingKnots)
         ]
@@ -355,7 +335,7 @@ class SimpleQuadrupedalGaitProblem(SimpleQuadrupedalGaitProblem):
             self.createMySwingFootModel(
                 timeStep,
                 [],
-                comTask=comTask * (k+1)/flyingKnots + comRef,
+                comTask=None,#comTask * (k+1)/flyingKnots + comRef,
                 rotationTask=rotation_matrix(0, rot*(k+flyingKnots+1)/(2*flyingKnots), 0).dot(rotationRef)
             ) for k in range(flyingKnots)
         ]
@@ -366,28 +346,24 @@ class SimpleQuadrupedalGaitProblem(SimpleQuadrupedalGaitProblem):
                     self.lhFootId,
                     self.rhFootId]
         Pos0 = np.array([self.rdata.oMf[frameId].translation for frameId in framesId])
-        Pos1 = np.array([rotation_matrix(0, rot, 0).dot(Pos0[i]) + jumpLength for i, frameId in enumerate(framesId)])
-        Rot0 = np.array([self.rdata.oMf[frameId].rotation for frameId in framesId])
-        PosTask = [[framesId[i], pinocchio.SE3(Rot0[i], Pos1[i])] for i in range(len(framesId))]
-        # Pos0 = np.array([self.rdata.oMf[frameId].translation for frameId in framesId])
-        # Pos1 = np.array([Pos0[i] + jumpLength for i, frameId in enumerate(framesId)])
-        # Rot0 = np.array([self.rdata.oMf[frameId].rotation for frameId in framesId])
-        # PosTask = [[framesId[i], pinocchio.SE3(Rot0[i], Pos1[i])] for i in range(len(framesId))]
+        Pos1 = np.array([rotation_matrix(0, rot, 0).dot(Pos0[i]) + jumpLength for i in range(len(framesId))])
+        PosTask = [[framesId[i], pinocchio.SE3(np.eye(3), Pos1[i])] for i in range(len(framesId))]
 
         landingPhase = [
             self.createMyImpulseModel(
                 [self.lfFootId, self.rfFootId, self.lhFootId, self.rhFootId],
-                swingFootTask=PosTask
+                swingFootTask=None#PosTask
             )
         ]
 
         ''' LANDED PHASE '''
+        comTask = np.array(jumpLength)
         landed = [
             self.createMySwingFootModel(
                 timeStep,
                 [self.lfFootId, self.rfFootId, self.lhFootId, self.rhFootId],
-                comTask=comTask+comRef,
-                rotationTask=None
+                comTask=None,#comTask+comRef,
+                rotationTask=rotation_matrix(0, rot, 0).dot(rotationRef)
             ) for k in range(groundKnots)
         ]
 

@@ -42,7 +42,7 @@ salto_gait = {  'jumpHeight': 1,
                 'groundKnots': 20,
                 'flyingKnots': 40    }
 rot_gait = {  'jumpHeight': 1,
-                'jumpRot': np.pi,
+                'jumpRot': np.pi/2,
                 'timeStep': 1e-2,
                 'groundKnots': 20,
                 'flyingKnots': 40    }
