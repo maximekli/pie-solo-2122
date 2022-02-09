@@ -8,7 +8,9 @@
         <light cutoff="100" diffuse="1 1 1" dir="-0 0 -1.3" directional="true" exponent="1" pos="0 0 1.3" specular=".1 .1 .1"/>
         <geom conaffinity="1" condim="3" name="floor" pos="0 0 0" rgba="0.8 0.9 0.8 1" size="20 20 .125" type="plane" material="MatPlane"/>
         <body name="SOLO" pos="0 0 .5">
-            <freejoint name="root"/>
+            <joint armature="0" axis="1 0 0" damping="0" limited="false" name="rootx" pos="0 0 0" stiffness="0" type="slide"/>
+            <joint armature="0" axis="0 0 1" damping="0" limited="false" name="rootz" pos="0 0 0" stiffness="0" type="slide"/>
+            <joint armature="0" axis="0 1 0" damping="0" limited="false" name="rooty" pos="0 0 0" stiffness="0" type="hinge"/>
             <geom type="mesh" contype="0" conaffinity="0" group="1" rgba="0.8 0.8 0.8 1" mesh="solo_12_base" />
             <geom type="mesh" rgba="0.8 0.8 0.8 1" mesh="solo_12_base" />
             <body name="FL_SHOULDER" pos="0.1946 0.0875 0">
