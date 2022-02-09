@@ -26,10 +26,10 @@ v_0     = robot.v0
 CoM_0   = robot.com(q_0)
 v_CoM_0 = robot.vcom(q_0,v_0)
 
-dt      = 1e-2
+dt      = 1e-3
 Ts      = 0.1
-L       = 10
-h       = 10
+L       = 1
+h       = 1
 
 alpha   = np.arctan(4*h/L)
 Vs      = np.sqrt(2*abs(g[2])*h)/np.sin(alpha)
@@ -55,15 +55,15 @@ z_CoM  = lambda t : quad(dz_CoM, 0, t)[0]
 X_CoM  = lambda t :  np.array([x_CoM(t),y_CoM(t),z_CoM(t)])
 
 
-def trajectory(T=T):
+def trajectoryCoM(T=T):
     CoM = [CoM_0]
     for t in T:
         if t==0: continue
         CoM.append(CoM[-1] + dt*v_CoM(t))
     return CoM
-CoM = trajectory()
+CoM = trajectoryCoM()
 
-def test_trajectory(CoM=CoM, T=T, id_Ts=id_Ts):
+def test_trajectoryCoM(CoM=CoM, T=T, id_Ts=id_Ts):
     X0 = CoM[id_Ts]
     CoM = np.array([X-X0 for X in CoM])
     X0 = CoM[id_Ts]
@@ -91,9 +91,9 @@ def test_trajectory(CoM=CoM, T=T, id_Ts=id_Ts):
     ax1.set_ylabel('Z')
     ax1.grid(True)
     plt.show(block=False)
-test_trajectory()
+test_trajectoryCoM()
 
-def flight(T=T):
+def trajectoryJoints(T=T):
     Q   = [q_0]
     dQ  = [np.zeros(q_0.size)]
     q   = q_0
@@ -108,19 +108,19 @@ def flight(T=T):
         dQ.append(dq)
         Q.append(q)
     return Q, dQ
-Q, dQ = flight()
+Q, dQ = trajectoryJoints()
 '''
 JOINTS NAMES
     0:  'FL_HAA'     1: 'FL_HFE'    2:  'FL_KFE'    3:  'FL_ANKLE'
     4:  'FR_HAA'     5: 'FR_HFE'    6:  'FR_KFE'    7:  'FR_ANKLE'
     8:  'HL_HAA'     9: 'HL_HFE'   10:  'HL_KFE'   11:  'HL_ANKLE'
-12:  'HR_HAA'    13: 'HR_HFE'   14:  'HR_KFE'   15:  'HR_ANKLE'
+   12:  'HR_HAA'    13: 'HR_HFE'   14:  'HR_KFE'   15:  'HR_ANKLE'
 model.nqs.tolist()
 >> [0, 7, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 model.nvs.tolist()
 >> [0, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 '''
-def test_flight(Q=Q, T=T, id_Ts=id_Ts):
+def test_trajectoryJoints(Q=Q, T=T, id_Ts=id_Ts):
     Q_Ts = Q[id_Ts]
     fig, (ax1, ax2) = plt.subplots(2, 1)
     fig.subplots_adjust(hspace=0.5)
@@ -136,12 +136,13 @@ def test_flight(Q=Q, T=T, id_Ts=id_Ts):
     ax2.set_ylabel('joint 10: HL_KFE')
     ax2.grid(True)
     plt.show(block=False)
-test_flight()
+test_trajectoryJoints()
 
-def compute_trajectory(Q=Q):
+def compute_trajectoryCoM(Q=Q):
+    N = len(Q)
     com = CoM_0
     CoM = [CoM_0]
-    for i in range(len(Q)-1):
+    for i in range(N-1):
         dq = Q[i+1]-Q[i]
         J = robot.Jcom(Q[i])
         v = J.dot(dq[1:])
@@ -149,9 +150,9 @@ def compute_trajectory(Q=Q):
         if (com-CoM_0)[2] < 0: break
         CoM.append(com)
     return CoM
-CoM = compute_trajectory(Q)
+CoM = compute_trajectoryCoM(Q)
 
-def test_flight_CoM(CoM=CoM, T=T, id_Ts=id_Ts):
+def test_compute_trajectoryCoM(CoM=CoM, T=T[0:len(CoM)], id_Ts=id_Ts):
     X0 = CoM[id_Ts]
     CoM = np.array(CoM)
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1)
@@ -178,7 +179,7 @@ def test_flight_CoM(CoM=CoM, T=T, id_Ts=id_Ts):
     ax1.set_ylabel('Z')
     ax1.grid(True)
     plt.show(block=False)
-test_flight_CoM()
+test_compute_trajectoryCoM()
 
 
  

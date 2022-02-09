@@ -200,35 +200,83 @@ enableGUI                                        = True  # enable PyBullet GUI o
 robotId, solo, revoluteJointIndices, torques_ref = configure_simulation(dt, enableGUI)
 
 
-for i in range(1000+len(Q)+1000):
+for i in range(1000+len(T)+1000):
     # Time at the start of the loop
     if realTimeSimulation:
         t0 = time.perf_counter()
-    if i == 0 :
+
+    # ''' INITIALIZED POSITION '''
+    if i < 1000 :
         # Parameters for the PD controller
         Kp      = 8
         Kd      = 0.06
+
+        # Joints configuration
         dq      = np.zeros(q_0.size)
         q       = q_0
-        print("\n\n\nINITIALIZATION")   
-    if i == 1000 :
+
+        # Get position and velocity of all joints in PyBullet (free flying base + motors)
+        qa, qa_dot  = getPosVelJoints(robotId, revoluteJointIndices)
+        qa          = qa[7:]
+        qa_dot      = qa_dot[6:]
+
+        # Target position and velocity for all joints
+        qa_ref      = np.array([q[7:]]).T  # target angular positions for the motors
+        qa_dot_ref  = np.array([dq[7:]]).T  # target angular velocities for the motors
+
+        # Call controller to get torques for all joints
+        jointTorques = PD(qa_ref, qa_dot_ref, qa, qa_dot, dt, Kp, Kd, torques_sat, torques_ref)
+        
+    # ''' JUMP TRAJECTORY '''
+    elif (1000 <= i) and (i < 1000+len(T)) :
         # Parameters for the PD controller
         Kp      = 8
         Kd      = 0.06
-        J       = robot.Jcom(q_0)
-        v       = 500*v_CoM(Ts)
-        w       = w_CoM(Ts)
+
+        # Joints configuration
+        t       = (i-1000)*dt
+        J       = robot.Jcom(q)
+        v       = v_CoM(t)
+        w       = w_CoM(t)
         Jpinv   = pinv(J)
         dq      = np.concatenate([np.array([0]), Jpinv.dot(v)])
-        q       = q_0 + Ts*dq
-        print("BEGIN JUMP")    
-    if i == 1000+len(Q) : 
+        q       = q + dt*dq
+
+        # Get position and velocity of all joints in PyBullet (free flying base + motors)
+        qa, qa_dot  = getPosVelJoints(robotId, revoluteJointIndices)
+        qa          = qa[7:]
+        qa_dot      = qa_dot[6:]
+
+        # Target position and velocity for all joints
+        qa_ref      = np.array([q[7:]]).T  # target angular positions for the motors
+        qa_dot_ref  = np.array([dq[7:]]).T  # target angular velocities for the motors
+
+        # Call controller to get torques for all joints
+        jointTorques = PD(qa_ref, qa_dot_ref, qa, qa_dot, dt, Kp, Kd, torques_sat, torques_ref)
+
+    # ''' GO BACK TO INITIALIZED POSITION '''
+    else : 
         # Parameters for the PD controller
         Kp      = 8
         Kd      = 0.06
+
+        # Joints configuration
         dq      = np.zeros(q_0.size)
         q       = q_0
-        print("END JUMP\n\n\n")
+
+        # Get position and velocity of all joints in PyBullet (free flying base + motors)
+        qa, qa_dot  = getPosVelJoints(robotId, revoluteJointIndices)
+        qa          = qa[7:]
+        qa_dot      = qa_dot[6:]
+
+        # Target position and velocity for all joints
+        qa_ref      = np.array([q[7:]]).T  # target angular positions for the motors
+        qa_dot_ref  = np.array([dq[7:]]).T  # target angular velocities for the motors
+
+        # Call controller to get torques for all joints
+        jointTorques = PD(qa_ref, qa_dot_ref, qa, qa_dot, dt, Kp, Kd, torques_sat, torques_ref)
+    
+    
     '''
     revoluteJointIndices = [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]
     JOINTS NAMES
@@ -241,16 +289,6 @@ for i in range(1000+len(Q)+1000):
     model.nvs.tolist()
     >> [0, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     '''
-    # Get position and velocity of all joints in PyBullet (free flying base + motors)
-    qa, qa_dot  = getPosVelJoints(robotId, revoluteJointIndices)
-    qa          = qa[7:]
-    qa_dot      = qa_dot[6:]
-
-    # Target position and velocity for all joints
-    qa_ref      = np.array([q[7:]]).T  # target angular positions for the motors
-    qa_dot_ref  = np.array([dq[7:]]).T  # target angular velocities for the motors
-    # Call controller to get torques for all joints
-    jointTorques = PD(qa_ref, qa_dot_ref, qa, qa_dot, dt, Kp, Kd, torques_sat, torques_ref)
 
     # Set control torques for all joints in PyBullet
     p.setJointMotorControlArray(robotId, revoluteJointIndices, controlMode=p.TORQUE_CONTROL, forces=jointTorques)
