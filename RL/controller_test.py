@@ -9,7 +9,7 @@ for i_episode in range(100):
 
     for t in range(1000):
         env.render()
-        action = np.zeros(24)
+        action = np.zeros(env.action_space.shape[0])
         observation, reward, done, info = env.step(action)
         if done:
             print("Episode finished after {} timesteps".format(t+1))
