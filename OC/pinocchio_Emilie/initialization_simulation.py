@@ -2,15 +2,15 @@
 
 import numpy as np  # Numpy library
 import pybullet_data
-from example_robot_data import loadSolo  # Functions to load the SOLO quadruped
-
 import pybullet as p  # PyBullet simulator
+from example_robot_data import loadSolo  # Functions to load the SOLO quadruped
+from model_com import g
 
 
 def configure_simulation(dt, enableGUI):
     global jointTorques
     # Load the robot for Pinocchio
-    solo = loadSolo(True)
+    solo = loadSolo(False)
     solo.initDisplay(loadModel=True)
 
     # Start the client for PyBullet
@@ -22,7 +22,7 @@ def configure_simulation(dt, enableGUI):
     # p.DIRECT for non-graphical version
 
     # Set gravity (disabled by default)
-    p.setGravity(0, 0, -9.81)
+    p.setGravity(0, 0, g[2])
 
     # Load horizontal plane for PyBullet
     p.setAdditionalSearchPath(pybullet_data.getDataPath())
@@ -32,29 +32,31 @@ def configure_simulation(dt, enableGUI):
     robotStartPos = [0, 0, 0.35]
     robotStartOrientation = p.getQuaternionFromEuler([0, 0, 0])
     p.setAdditionalSearchPath("/opt/openrobots/share/example-robot-data/robots/solo_description/robots")
-    robotId = p.loadURDF("solo.urdf", robotStartPos, robotStartOrientation)
+    robotId = p.loadURDF("solo12.urdf", robotStartPos, robotStartOrientation)
 
     # Set time step of the simulation
-    # dt = 0.001
     p.setTimeStep(dt)
-    # realTimeSimulation = True # If True then we will sleep in the main loop to have a frequency of 1/dt
 
+    revoluteJointIndices = [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]
+    torques_ref = np.zeros((len(revoluteJointIndices), 1)) # feedforward torques
+    
     # Disable default motor control for revolute joints
-    revoluteJointIndices = [0, 1, 3, 4, 6, 7, 9, 10]
     p.setJointMotorControlArray(robotId,
                                 jointIndices=revoluteJointIndices,
                                 controlMode=p.VELOCITY_CONTROL,
                                 targetVelocities=[0.0 for m in revoluteJointIndices],
-                                forces=[0.0 for m in revoluteJointIndices])
+                                forces=torques_ref)
 
     # Enable torque control for revolute joints
-    jointTorques = [0.0 for m in revoluteJointIndices]
-    p.setJointMotorControlArray(robotId, revoluteJointIndices, controlMode=p.TORQUE_CONTROL, forces=jointTorques)
+    p.setJointMotorControlArray(robotId,
+                                jointIndices=revoluteJointIndices,
+                                controlMode=p.TORQUE_CONTROL,
+                                forces=torques_ref)
 
     # Compute one step of simulation for initialization
     p.stepSimulation()
 
-    return robotId, solo, revoluteJointIndices
+    return robotId, solo, revoluteJointIndices, torques_ref
 
 
 # Function to get the position/velocity of the base and the angular position/velocity of all joints
@@ -74,8 +76,7 @@ def getPosVelJoints(robotId, revoluteJointIndices):
 
     return q, qdot
 
-
-
+    
 # p.ACTIVATION_STATE_DISABLE_SLEEPING            p.GRAPHICS_SERVER
 # p.ACTIVATION_STATE_DISABLE_WAKEUP              p.GRAPHICS_SERVER_MAIN_THREAD
 # p.ACTIVATION_STATE_ENABLE_SLEEPING             p.GRAPHICS_SERVER_TCP
