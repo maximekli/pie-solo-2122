@@ -1,10 +1,12 @@
 import os
+import math
 import numpy as np
 from gym.envs.mujoco import mujoco_env
 from gym import utils
 
+
 DEFAULT_CAMERA_CONFIG = {
-    "trackbodyid": 2,
+    "trackbodyid": 1,
     "distance": 3.0,
     "lookat": np.array((0.0, 0.0, 1.15)),
     "elevation": -20.0,
@@ -16,30 +18,26 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def __init__(
         self,
         xml_file= path + "/../models/solo_description/robots/solo12.xml",
-        forward_reward_weight=1.0,
         ctrl_cost_weight=1e-3,
-        healthy_reward=1.0,
-        terminate_when_unhealthy=False,
-        healthy_z_range=(-.1, float("inf")),
-        healthy_angle_range=(-3.15,3.15), #TBD
-        healthy_angle_vel_range=(-float("inf"),float("inf")), #TBD
+        healthy_reward=0.1,
+        terminate_when_unhealthy=True,
+        healthy_state_range=(-1000.0, 1000.0),
+        healthy_z_range=(-0.3, float("inf")),
         reset_noise_scale=5e-2,
-        exclude_current_positions_from_observation=True,
+        exclude_current_positions_from_observation=False,
     ):
         utils.EzPickle.__init__(**locals())
-
-        self._forward_reward_weight = forward_reward_weight
 
         self._ctrl_cost_weight = ctrl_cost_weight
 
         self._healthy_reward = healthy_reward
         self._terminate_when_unhealthy = terminate_when_unhealthy
 
+        self._healthy_state_range = healthy_state_range
         self._healthy_z_range = healthy_z_range
-        self._healthy_angle_range = healthy_angle_range
-        self._healthy_angle_vel_range = healthy_angle_vel_range
 
-        self.lift_flag = False
+        #self._healthy_angle_range = healthy_angle_range
+        #self._healthy_angle_vel_range = healthy_angle_vel_range
 
         self._reset_noise_scale = reset_noise_scale
 
@@ -59,10 +57,6 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
             * self._healthy_reward
         )
 
-    def control_cost(self, action): #TBD
-        control_cost = self._ctrl_cost_weight * np.sum(np.square(action))
-        return control_cost
-
     @property
     def is_healthy(self):
         """
@@ -73,32 +67,41 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
                     roll, pitch, yaw,
                     joints angular velocity
         """
-        pos_body = self.sim.data.qpos[:3]
-        # orientation = self.sim.data.qpos[3:7]
-        pos_joints = self.sim.data.qpos[7:]
-        # vel_body = self.sim.data.qvel[:3]
-        # rot_body = self.sim.data.qvel[3:6]
-        vel_joints = self.sim.data.qvel[6:]
+        #pos_body = self.sim.data.qpos[:3]
+        #orientation = self.sim.data.qpos[3:7]
+        #pos_joints = self.sim.data.qpos[7:]
+        #vel_body = self.sim.data.qvel[:3]
+        #rot_body = self.sim.data.qvel[3:6]
+        #vel_joints = self.sim.data.qvel[6:]
+
+        state = self.state_vector()
+        #print(state)
 
         min_z, max_z = self._healthy_z_range
-        min_angle, max_angle = self._healthy_angle_range
-        min_angle_vel, max_angle_vel = self._healthy_angle_vel_range
+        min_state, max_state = self._healthy_state_range
 
-        healthy_z = min_z < pos_body[-1] < max_z
-        healthy_joints_pos = np.all(np.logical_and(min_angle < pos_joints, pos_joints < max_angle))
-        healthy_joints_vel = np.all(np.logical_and(min_angle_vel < vel_joints, vel_joints < max_angle_vel))
+        #min_angle, max_angle = self._healthy_angle_range
+        #min_angle_vel, max_angle_vel = self._healthy_angle_vel_range
+        z = self.sim.data.qpos[1]
+        healthy_z = min_z < self.sim.data.qpos[1] < max_z
+        healthy_state = np.all(np.logical_and(min_state < state, state < max_state))
 
-        if False:
-            print("healthy_z: ", healthy_z)
-            print("healthy_joints_pos: ", healthy_joints_pos)
-            print("healthy_joints_vel: ", healthy_joints_vel)
+        #healthy_joints_pos = np.all(np.logical_and(min_angle < pos_joints, pos_joints < max_angle))
+        #healthy_joints_vel = np.all(np.logical_and(min_angle_vel < vel_joints, vel_joints < max_angle_vel))
 
-        is_healthy = all((healthy_joints_pos, healthy_z,healthy_joints_vel))
+        #print(z)
+        #if healthy_z :
+            #print("healthy_z: ", healthy_z)
+            #print("healthy_joints_pos: ", healthy_joints_pos)
+            #print("healthy_joints_vel: ", healthy_joints_vel)
+
+        is_healthy = all((healthy_state, healthy_z))
 
         return is_healthy
 
     @property
     def done(self):
+        #print("Is unhealthy?", self.is_healthy)
         done = not self.is_healthy if self._terminate_when_unhealthy else False
         return done
 
@@ -118,39 +121,48 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         observation = np.concatenate((position, velocity)).ravel()
         return observation
 
+    def _euler_from_quaternion(self,q):
+        """
+        Convert a quaternion into euler angles (roll, pitch, yaw)
+        roll is rotation around x in radians (counterclockwise)
+        pitch is rotation around y in radians (counterclockwise)
+        yaw is rotation around z in radians (counterclockwise)
+        """
+        w,x,y,z = q
+        t0 = +2.0 * (w * x + y * z)
+        t1 = +1.0 - 2.0 * (x * x + y * y)
+        roll_x = math.atan2(t0, t1)
+     
+        t2 = +2.0 * (w * y - z * x)
+        t2 = +1.0 if t2 > +1.0 else t2
+        t2 = -1.0 if t2 < -1.0 else t2
+        pitch_y = math.asin(t2)
+     
+        t3 = +2.0 * (w * z + x * y)
+        t4 = +1.0 - 2.0 * (y * y + z * z)
+        yaw_z = math.atan2(t3, t4)
+     
+        return roll_x, pitch_y, yaw_z
+
     def _compute_reward(self):
-        # four points of contact with ground
-        feet_on_ground_reward = 0
-        #if self.sim.data.ncon == 4 :
-        #    feet_on_ground_reward = 10
-
-        # proportionnal reward with z-position and liftoff
         jump_reward = 0
-        z = self.sim.data.qpos[2]
-        if self.sim.data.ncon == 0:
-            if self.lift_flag :
-                jump_reward += z*5
-            else :
-                self.lift_flag = True
-                jump_reward += 100
-        
-        # zvel_reward = self.sim.data.qvel[2]>0 * 100
 
-        rewards = feet_on_ground_reward + jump_reward #+ zvel_reward
+        ## REWARD BASED ON THE PITCH ANGLE OF THE BASE 
+        jump_reward = self.sim.data.qpos[2]*180/(2*math.pi)
+
+        #roll, pitch, yaw = self._euler_from_quaternion(quat)
+
+        rewards = jump_reward + self.healthy_reward
         return rewards
 
 
     def step(self, action):
-        #self.frame_skip = 50
+
         self.do_simulation(action, self.frame_skip)
         self.render()
 
-        ctrl_cost = self.control_cost(action)
-        rewards = self._compute_reward()
-        costs = 0 #TBD
-
+        reward = self._compute_reward()
         observation = self._get_obs()
-        reward = rewards - costs
         done = self.done
         info = 0
 
@@ -168,7 +180,6 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         )
 
         self.set_state(qpos, qvel)
-        self.lift_flag = False
 
         observation = self._get_obs()
         return observation
