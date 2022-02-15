@@ -181,7 +181,7 @@ def sac(env, test_env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=
 
     # Logger for observations and actions in csv file
     csvfile = open(logger_obs_ac_args['output_dir']+logger_obs_ac_args['output_fname'],'w')
-    fields = ['obs','action','obs2','reward'] 
+    fields = ['episode','obs','action','obs2','reward'] 
     csvwriter = csv.DictWriter(csvfile, fieldnames = fields) 
     csvwriter.writeheader()
 
@@ -331,7 +331,8 @@ def sac(env, test_env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=
     start_time = time.time()
     o, ep_ret, ep_len = env.reset(), 0, 0
     highest_reward = -np.inf
-
+    episode = 0
+    
     # Main loop: collect experience in env and update/log each epoch
     for t in range(total_steps):
         
@@ -360,12 +361,13 @@ def sac(env, test_env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=
         replay_buffer.store(o, a, r, o2)
 
         # Store experience in log file of observations and actions
-        csvwriter.writerows([{'obs':o,'action':a,'obs2':o2,'reward':r}])
+        csvwriter.writerows([{'episode':episode,'obs':o,'action':a,'obs2':o2,'reward':r}])
 
         # Super critical, easy to overlook step: make sure to update 
         # most recent observation!
         o = o2
 
+    
         # End of trajectory handling
         if d or (ep_len == max_ep_len):
             logger.store(EpRet=ep_ret, EpLen=ep_len)
@@ -381,6 +383,8 @@ def sac(env, test_env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=
             highest_reward = max(highest_reward, ep_ret)
             print("# Highest reward yet => {}".format(highest_reward))
                 
+            episode += 1
+
             o, ep_ret, ep_len = env.reset(), 0, 0
 
         # Update handling
