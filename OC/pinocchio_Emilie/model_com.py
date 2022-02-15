@@ -38,17 +38,17 @@ A_CoM   = lambda t : np.array([ddx_CoM(t), ddy_CoM(t), ddz_CoM(t)])
 dx_CoM  = lambda t : f_x*t if t<Ts else f_x*Ts
 dy_CoM  = lambda t : 0
 dz_CoM  = lambda t : (f_z*t if t<Ts else f_z*Ts)+g[2]*t
-V_CoM   = lambda t :  np.array([dx_CoM(t),dy_CoM(t),dz_CoM(t)])
+V_CoM   = lambda t : v_CoM_0 + np.array([dx_CoM(t),dy_CoM(t),dz_CoM(t)])
 # w_CoM   = lambda t : np.array([np.pi/Tt,0,0])
 
-x_CoM  = lambda t : f_x*t**2/2 if t<Ts else f_x*Ts*(t-Ts)+f_x*Ts**2/2
-y_CoM  = lambda t : 0
-z_CoM  = lambda t : (f_z*t**2/2 if t<Ts else f_z*Ts*(t-Ts)+f_z*Ts**2/2)+g[2]*t**2/2
-X_CoM  = lambda t :  np.array([x_CoM(t),y_CoM(t),z_CoM(t)])
+x_CoM   = lambda t : f_x*t**2/2 if t<Ts else f_x*Ts*(t-Ts)+f_x*Ts**2/2
+y_CoM   = lambda t : 0
+z_CoM   = lambda t : (f_z*t**2/2 if t<Ts else f_z*Ts*(t-Ts)+f_z*Ts**2/2)+g[2]*t**2/2
+X_CoM   = lambda t : CoM_0 + np.array([x_CoM(t),y_CoM(t),z_CoM(t)])
 Rot_CoM = lambda t : tangage(-2*np.pi/Tt*t)
 
 
-def plot_trajectory(T=T):
+def plot_modelTrajectory(T=T):
     fig1, ax1 = plt.subplots()
     L_CoM = np.array([X_CoM(t) for t in T])
     ax1.plot(T,L_CoM)

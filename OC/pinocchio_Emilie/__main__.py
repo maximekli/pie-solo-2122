@@ -26,7 +26,7 @@ from inverse_kinematics import *
 #  INITIALIZATION SIMULATION  ##
 ################################
 
-Q = computeTrajectory()
+Q, vQ = computeTrajectory()
     
 # If True then we will sleep in the main loop to have a 1:1 ratio of (elapsed real time / elapsed time in the
 # simulation)
@@ -48,7 +48,7 @@ for i in range(1000+len(T)+1000):
         Kd      = 0.06
 
         # Joints configuration
-        dq      = np.zeros(q_0.size)
+        vq      = np.zeros(q_0.size)
         q       = q_0
 
         # Get position and velocity of all joints in PyBullet (free flying base + motors)
@@ -58,7 +58,7 @@ for i in range(1000+len(T)+1000):
 
         # Target position and velocity for all joints
         qa_ref      = np.array([q[7:]]).T  # target angular positions for the motors
-        qa_dot_ref  = np.array([dq[7:]]).T  # target angular velocities for the motors
+        qa_dot_ref  = np.array([vq[7:]]).T  # target angular velocities for the motors
 
         # Call controller to get torques for all joints
         jointTorques = PD(qa_ref, qa_dot_ref, qa, qa_dot, dt, Kp, Kd, torques_sat, torques_ref)
@@ -70,7 +70,7 @@ for i in range(1000+len(T)+1000):
         Kd      = 0.06
 
         # Joints configuration
-        dq      = np.zeros(q_0.size)
+        _ , vq  = vQ[i-1000]
         msg, q  = Q[i-1000]
         print(f"{i} : {msg}")
 
@@ -81,7 +81,7 @@ for i in range(1000+len(T)+1000):
 
         # Target position and velocity for all joints
         qa_ref      = np.array([q[7:]]).T  # target angular positions for the motors
-        qa_dot_ref  = np.array([dq[7:]]).T  # target angular velocities for the motors
+        qa_dot_ref  = np.array([vq[7:]]).T  # target angular velocities for the motors
 
         # Call controller to get torques for all joints
         jointTorques = PD(qa_ref, qa_dot_ref, qa, qa_dot, dt, Kp, Kd, torques_sat, torques_ref)
@@ -93,7 +93,7 @@ for i in range(1000+len(T)+1000):
         Kd      = 0.06
 
         # Joints configuration
-        dq      = np.zeros(q_0.size)
+        vq      = np.zeros(q_0.size)
         q       = q_0
 
         # Get position and velocity of all joints in PyBullet (free flying base + motors)
@@ -103,7 +103,7 @@ for i in range(1000+len(T)+1000):
 
         # Target position and velocity for all joints
         qa_ref      = np.array([q[7:]]).T  # target angular positions for the motors
-        qa_dot_ref  = np.array([dq[7:]]).T  # target angular velocities for the motors
+        qa_dot_ref  = np.array([vq[7:]]).T  # target angular velocities for the motors
 
         # Call controller to get torques for all joints
         jointTorques = PD(qa_ref, qa_dot_ref, qa, qa_dot, dt, Kp, Kd, torques_sat, torques_ref)
