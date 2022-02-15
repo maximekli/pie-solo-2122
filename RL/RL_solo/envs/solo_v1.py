@@ -148,8 +148,12 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         jump_reward = 0
 
         ## REWARD BASED ON THE PITCH ANGLE OF THE BASE 
-        jump_reward = self.sim.data.qpos[2]*180/(2*math.pi)
+        backroll = - self.sim.data.qvel[2]  # rooty - angular velocity (rad/s)
+        height = self.sim.data.qpos[1]  # rootz - position (m)
+        backslide = - self.sim.data.qvel[0]  # rootx - velocity (m/s)
 
+        #jump_reward = -self.sim.data.qpos[2]*180/(2*math.pi)
+        jump_reward = backroll * (1.0 + .3 * height + .05 * backslide) #+ .1 * vel_act
         #roll, pitch, yaw = self._euler_from_quaternion(quat)
 
         rewards = jump_reward + self.healthy_reward
