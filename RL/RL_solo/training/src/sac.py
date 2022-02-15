@@ -11,26 +11,30 @@ import csv
 
 
 class MLPActorCriticSym(torch.nn.Module):
+    """
+    Actor critic agent but produces only symmetric actions (between left and right)
+    """
 
     def __init__(self, observation_space, action_space, hidden_sizes=(256,256),
                  activation=torch.nn.ReLU):
         super().__init__()
 
-        obs_dim = observation_space.shape[0] #- 12
+        obs_dim = observation_space.shape[0]
         act_dim = action_space.shape[0]//2
         act_limit = action_space.high[0]
 
         # build policy and value functions
         self.pi = core.SquashedGaussianMLPActor(obs_dim, act_dim, hidden_sizes, activation, act_limit)
-        self.q1 = core.MLPQFunction(obs_dim, act_dim, hidden_sizes, activation)
+        self.q1 = core.MLPQFunction(obs_dim, act_dim, hidden_sizes, activation) 
         self.q2 = core.MLPQFunction(obs_dim, act_dim, hidden_sizes, activation)
 
     def act(self, obs, deterministic=False):
-        #obs2 = list(np.concatenate([obs[:13],obs[19+6:19+6+6]]))
+        """
+        returns symmetric action from observations
+        """
         with torch.no_grad():
             a, _ = self.pi(obs, deterministic, False)
             a = np.concatenate([a.numpy(),a.numpy()])
-            #a = torch.from_numpy(a)
             return a
 
 class ReplayBuffer:
@@ -177,7 +181,7 @@ def sac(env, test_env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=
 
     # Logger for observations and actions in csv file
     csvfile = open(logger_obs_ac_args['output_dir']+logger_obs_ac_args['output_fname'],'w')
-    fields = ['obs','action'] 
+    fields = ['obs','action','obs2','reward'] 
     csvwriter = csv.DictWriter(csvfile, fieldnames = fields) 
     csvwriter.writeheader()
 
@@ -356,7 +360,7 @@ def sac(env, test_env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=
         replay_buffer.store(o, a, r, o2)
 
         # Store experience in log file of observations and actions
-        csvwriter.writerows([{'obs':o2,'action':a}])
+        csvwriter.writerows([{'obs':o,'action':a,'obs2':o2,'reward':r}])
 
         # Super critical, easy to overlook step: make sure to update 
         # most recent observation!
