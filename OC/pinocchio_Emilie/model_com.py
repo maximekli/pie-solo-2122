@@ -1,4 +1,3 @@
-import time
 import numpy as np
 from numpy.linalg import norm, solve, pinv
 from scipy.integrate import quad
@@ -19,8 +18,8 @@ v_CoM_0 = robot.vcom(q_0,v_0).copy()
 
 dt      = 1e-3
 Ts      = 0.1
-L       = 2
-h       = 2
+L       = 1
+h       = 1
 g       = model.gravity.linear
 
 alpha   = np.arctan(4*h/L)
@@ -46,4 +45,20 @@ x_CoM  = lambda t : f_x*t**2/2 if t<Ts else f_x*Ts*(t-Ts)+f_x*Ts**2/2
 y_CoM  = lambda t : 0
 z_CoM  = lambda t : (f_z*t**2/2 if t<Ts else f_z*Ts*(t-Ts)+f_z*Ts**2/2)+g[2]*t**2/2
 X_CoM  = lambda t :  np.array([x_CoM(t),y_CoM(t),z_CoM(t)])
-Rot_CoM = lambda t : tangage(np.pi/Tt*t)
+Rot_CoM = lambda t : tangage(-2*np.pi/Tt*t)
+
+
+def plot_trajectory(T=T):
+    fig1, ax1 = plt.subplots()
+    L_CoM = np.array([X_CoM(t) for t in T])
+    ax1.plot(T,L_CoM)
+    ax1.plot(T[id_Ts],L_CoM[id_Ts][0],'ro')
+    ax1.plot(T[id_Ts],L_CoM[id_Ts][1],'ro')
+    ax1.plot(T[id_Ts],L_CoM[id_Ts][2],'ro')
+    plt.show(block=False)
+    fig2, ax2 = plt.subplots()
+    ax2.plot(L_CoM[:,0],L_CoM[:,2])
+    L_CoM = np.array([X_CoM(t) for k, t in enumerate(T) if not k%100])
+    V_CoM = np.array([Rot_CoM(t).dot(np.array([1,0,0])) for k, t in enumerate(T) if not k%100])
+    ax2.quiver(L_CoM[:,0], L_CoM[:,2], V_CoM[:,0], V_CoM[:,2])
+    plt.show()

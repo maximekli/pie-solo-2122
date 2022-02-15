@@ -1,21 +1,11 @@
 from re import I
 from termios import FF1
-import time
 import numpy as np
 from numpy.linalg import norm, solve, pinv
 from scipy.integrate import quad
 import pinocchio as pin
-import example_robot_data
 import matplotlib.pyplot as plt
 from model_com import *
-
-def plot_trajectory(T=T):
-    L_CoM = [X_CoM(t) for t in T]
-    plt.plot(T,L_CoM)
-    plt.plot(T[id_Ts],L_CoM[id_Ts][0],'ro')
-    plt.plot(T[id_Ts],L_CoM[id_Ts][1],'ro')
-    plt.plot(T[id_Ts],L_CoM[id_Ts][2],'ro')
-    plt.show()
 
 def computeJointsConfiguration(Rot_ref, CoM_ref, q_init, K=1, q_0=robot.q0, epsilon=1e-4, DT=1e-2):
     IDX_TOOL    = robot.model.getFrameId('base_link')
@@ -25,12 +15,13 @@ def computeJointsConfiguration(Rot_ref, CoM_ref, q_init, K=1, q_0=robot.q0, epsi
     dq          = np.ones(q_0.shape)
     
     ## REFERENCE FOOTS PLACEMENTS
-    F1_ref      = robot.framePlacement(q_0, robot.model.getFrameId('FR_FOOT')).translation.copy()
-    F2_ref      = robot.framePlacement(q_0, robot.model.getFrameId('HR_FOOT')).translation.copy()
-    F3_ref      = robot.framePlacement(q_0, robot.model.getFrameId('FL_FOOT')).translation.copy()
-    F4_ref      = robot.framePlacement(q_0, robot.model.getFrameId('HL_FOOT')).translation.copy()
-    # Theta_ref   = TODO
+    # F1_ref      = robot.framePlacement(q_0, robot.model.getFrameId('FR_FOOT')).translation.copy()
+    # F2_ref      = robot.framePlacement(q_0, robot.model.getFrameId('HR_FOOT')).translation.copy()
+    # F3_ref      = robot.framePlacement(q_0, robot.model.getFrameId('FL_FOOT')).translation.copy()
+    # F4_ref      = robot.framePlacement(q_0, robot.model.getFrameId('HL_FOOT')).translation.copy()
+    # # Theta_ref   = TODO
     oMgoal = pin.SE3(Rot_ref,CoM_ref)
+    print(Rot_ref)
     while True :
         # Run the algorithms that outputs values in robot.data
         pin.framesForwardKinematics(robot.model,robot.data,q)
