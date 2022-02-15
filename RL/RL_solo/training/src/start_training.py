@@ -62,6 +62,8 @@ def training():
     save_freq = data['save_freq']
 
     logger_kwargs = setup_logger_kwargs(task_and_robot_environment_name,seed,outdir)
+    log_file_dir = outdir+task_and_robot_environment_name+'/'+task_and_robot_environment_name+'_s'+str(seed)+'/'
+    logger_obs_ac_args = {'output_dir':log_file_dir, 'output_fname':'obs_ac.csv'}
 
     # Set max timestep
     env.spec.timestep_limit = max_ep_len
@@ -84,7 +86,8 @@ def training():
         update_every=update_every, 
         num_test_episodes=num_test_episodes, 
         max_ep_len=max_ep_len, 
-        logger_kwargs=logger_kwargs, 
+        logger_kwargs=logger_kwargs,
+        logger_obs_ac_args=logger_obs_ac_args, 
         save_freq=save_freq,
         symmetry=True)
     env.close()

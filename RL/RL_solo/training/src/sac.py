@@ -7,6 +7,7 @@ import gym
 import time
 import spinup.algos.pytorch.sac.core as core
 from spinup.utils.logx import EpochLogger
+import csv
 
 
 class MLPActorCriticSym(torch.nn.Module):
@@ -66,7 +67,7 @@ def sac(env, test_env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=
         steps_per_epoch=4000, epochs=100, replay_size=int(1e6), gamma=0.99, 
         polyak=0.995, lr=1e-3, alpha=0.2, batch_size=100, start_steps=10000, 
         update_after=1000, update_every=50, num_test_episodes=10, max_ep_len=1000, 
-        logger_kwargs=dict(), save_freq=1, load=False, symmetry=False):
+        logger_kwargs=dict(), logger_obs_ac_args=dict(), save_freq=1, load=False, symmetry=False):
     """
     Soft Actor-Critic (SAC)
 
@@ -161,6 +162,8 @@ def sac(env, test_env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=
 
         logger_kwargs (dict): Keyword args for EpochLogger.
 
+        logger_obs_ac_args (dict): output_dir, output_fname for Logger.
+
         save_freq (int): How often (in terms of gap between epochs) to save
             the current policy and value function.
 
@@ -168,8 +171,15 @@ def sac(env, test_env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=
 
     """
 
+    # Logger for epoch results in txt file
     logger = EpochLogger(**logger_kwargs)
     logger.save_config(locals())
+
+    # Logger for observations and actions in csv file
+    csvfile = open(logger_obs_ac_args['output_dir']+logger_obs_ac_args['output_fname'],'w')
+    fields = ['obs','action'] 
+    csvwriter = csv.DictWriter(csvfile, fieldnames = fields) 
+    csvwriter.writeheader()
 
     torch.manual_seed(seed)
     np.random.seed(seed)
@@ -311,6 +321,7 @@ def sac(env, test_env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=
             logger.store(TestEpRet=ep_ret, TestEpLen=ep_len)
             print("# /// Deterministic Test Reward /// => {}".format(ep_ret))
 
+
     # Prepare for interaction with environment
     total_steps = steps_per_epoch * epochs
     start_time = time.time()
@@ -343,6 +354,9 @@ def sac(env, test_env, actor_critic=core.MLPActorCritic, ac_kwargs=dict(), seed=
 
         # Store experience to replay buffer
         replay_buffer.store(o, a, r, o2)
+
+        # Store experience in log file of observations and actions
+        csvwriter.writerows([{'obs':o2,'action':a}])
 
         # Super critical, easy to overlook step: make sure to update 
         # most recent observation!
