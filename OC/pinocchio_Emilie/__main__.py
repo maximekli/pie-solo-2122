@@ -66,12 +66,13 @@ for i in range(1000+len(T)+1000):
     # ''' JUMP TRAJECTORY '''
     elif (1000 <= i) and (i < 1000+len(T)) :
         # Parameters for the PD controller
-        Kp      = 0.8
+        Kp      = 8
         Kd      = 0.06
 
         # Joints configuration
         dq      = np.zeros(q_0.size)
-        q       = Q[i-1000]
+        msg, q  = Q[i-1000]
+        print(f"{i} : {msg}")
 
         # Get position and velocity of all joints in PyBullet (free flying base + motors)
         qa, qa_dot  = getPosVelJoints(robotId, revoluteJointIndices)
@@ -120,6 +121,8 @@ for i in range(1000+len(T)+1000):
     model.nvs.tolist()
     >> [0, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
     '''
+    if i==1000 : print("JUMP BEGIN !")
+    if i==1000+id_Ts : print("JUMP EFFECT !")
 
     # Set control torques for all joints in PyBullet
     p.setJointMotorControlArray(robotId, revoluteJointIndices, controlMode=p.TORQUE_CONTROL, forces=jointTorques)
