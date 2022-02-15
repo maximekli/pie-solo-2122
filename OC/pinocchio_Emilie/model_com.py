@@ -1,9 +1,6 @@
 import numpy as np
-from numpy.linalg import norm, solve, pinv
-from scipy.integrate import quad
-import pinocchio as pin
-import example_robot_data
 import matplotlib.pyplot as plt
+import example_robot_data
 from utils import tangage
 
 robot   = example_robot_data.load('solo12')

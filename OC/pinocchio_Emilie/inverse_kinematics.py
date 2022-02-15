@@ -1,8 +1,5 @@
-from re import I
-from termios import FF1
 import numpy as np
-from numpy.linalg import norm, solve, pinv
-from scipy.integrate import quad
+from numpy.linalg import norm, pinv
 import pinocchio as pin
 import matplotlib.pyplot as plt
 from model_com import *
@@ -33,17 +30,15 @@ def computeError(oMgoal, oMtool, placements_ref, placements):
     err_Frames  = np.concatenate([Fi-Fi_ref for Fi, Fi_ref in zip(placements,placements_ref)], axis=0)
     return np.concatenate((err_CoM, err_Frames), axis=0)
 
-def computeJointsConfiguration(Rot_ref, CoM_ref, q_init, K=1, q_0=robot.q0, epsilon=1e-3, DT=1e-3):
-    IT_MAX      = 1000
+def computeJointsConfiguration(Rot_ref, CoM_ref, q_init, K=1, q_0=robot.q0, epsilon=1e-4, DT=1e-2):
+    IT_MAX      = 5000
     ## REFERENCE PLACEMENTS
     oMgoal              = pin.SE3(Rot_ref,CoM_ref)
     framePlacements_ref = [robot.framePlacement(q_0, FRAME_ID).translation.copy() for FRAME_ID in FRAME_IDs]
     ## INITIALIZATION LOOP
     i           = 0
-    # q           = q_init.copy()
-    # dq          = np.ones(q_0.shape)
-    q           = pin.randomConfiguration(model)
-    dq          = np.random.rand(model.nv)*2-1
+    q           = q_init.copy()
+    # q           = pin.randomConfiguration(model)
     while True :
         # Run the algorithms that outputs values in data
         pin.framesForwardKinematics(model,data,q)
@@ -59,11 +54,11 @@ def computeJointsConfiguration(Rot_ref, CoM_ref, q_init, K=1, q_0=robot.q0, epsi
         ## JACOBIAN FROM CURRENT CONFIGURATION
         J           = computeJacobian(q, IDX_TOOL, FRAME_IDs)
         ## UPDATE CONFIGURATION
-        vq          = -K*pinv(J)@err
+        vq          = pinv(J)@(-K*err)
         q           = pin.integrate(model,q, vq * DT)
         ## UPDATE LOOP
         i+=1
-        # if not i%100: print(f"norm(err) = {norm(err)}")
+        if not i%1000: print(f"norm(err) = {norm(err)}")
         if norm(err) < epsilon:
             success = True
             break

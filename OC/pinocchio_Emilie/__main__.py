@@ -4,20 +4,12 @@
 #  LOADING MODULES ##
 #####################
 
-import imp
 import time
 import numpy as np
-from numpy.linalg import norm, pinv
-from scipy.integrate import quad
-import matplotlib.pyplot as plt
-
 import pybullet as p  # PyBullet simulator
-import pybullet_data
-import pinocchio as pin
-import example_robot_data
-# Functions to initialize the simulation and retrieve joints positions/velocities
+
 from PD import PD
-from initialization_simulation import configure_simulation, getPosVelJoints
+from initialization_simulation import configure_simulation, getPosVelJoints # Functions to initialize the simulation and retrieve joints positions/velocities
 from inverse_kinematics import *
 
 
@@ -81,7 +73,7 @@ for i in range(1000+len(T)+1000):
 
         # Target position and velocity for all joints
         qa_ref      = np.array([q[7:]]).T  # target angular positions for the motors
-        qa_dot_ref  = np.array([vq[7:]]).T  # target angular velocities for the motors
+        qa_dot_ref  = np.array([vq[6:]]).T  # target angular velocities for the motors
 
         # Call controller to get torques for all joints
         jointTorques = PD(qa_ref, qa_dot_ref, qa, qa_dot, dt, Kp, Kd, torques_sat, torques_ref)
