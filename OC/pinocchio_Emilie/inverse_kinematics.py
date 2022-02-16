@@ -1,8 +1,5 @@
-from re import I
-from termios import FF1
 import numpy as np
-from numpy.linalg import norm, solve, pinv
-from scipy.integrate import quad
+from numpy.linalg import norm, pinv
 import pinocchio as pin
 import matplotlib.pyplot as plt
 from model_com import *
@@ -23,31 +20,39 @@ IDX_TOOL    = model.getFrameId('base_link')
 
 def computeJacobian(q, IDX_TOOL, FRAME_IDs):
     # J_CoM       = robot.Jcom(q).copy()
-    J_CoM       = pin.computeFrameJacobian(model, data, q, IDX_TOOL).copy()
+    J_CoM       = robot.computeFrameJacobian(q, IDX_TOOL).copy()
     J_Frames    = np.concatenate([robot.computeFrameJacobian(q, FRAME_ID)[:3].copy() for FRAME_ID in FRAME_IDs], axis=0)
     return np.concatenate((J_CoM, J_Frames), axis=0)
+def computeJacobians(q, IDX_TOOL, FRAME_IDs):
+    # J_CoM       = robot.Jcom(q).copy()
+    J_CoM       = robot.computeFrameJacobian(q, IDX_TOOL).copy()
+    J_Frames    = [robot.computeFrameJacobian(q, FRAME_ID)[:3].copy() for FRAME_ID in FRAME_IDs]
+    return [J_CoM] + J_Frames
 
 def computeError(oMgoal, oMtool, placements_ref, placements):
     # err_CoM     = CoM - CoM_ref
     err_CoM     = pin.log(oMtool.inverse()*oMgoal).vector
     err_Frames  = np.concatenate([Fi-Fi_ref for Fi, Fi_ref in zip(placements,placements_ref)], axis=0)
     return np.concatenate((err_CoM, err_Frames), axis=0)
+def computeErrors(oMgoal, oMtool, placements_ref, placements):
+    # err_CoM     = CoM - CoM_ref
+    err_CoM     = pin.log(oMtool.inverse()*oMgoal).vector
+    err_Frames  = [Fi-Fi_ref for Fi, Fi_ref in zip(placements,placements_ref)]
+    return [err_CoM] + err_Frames
 
-def computeJointsConfiguration(Rot_ref, CoM_ref, q_init, K=1, q_0=robot.q0, epsilon=1e-3, DT=1e-3):
+def computeJointsConfiguration(Rot_ref, CoM_ref, q_init, K=1, q_0=robot.q0, epsilon=1e-4, DT=1e-2):
     IT_MAX      = 1000
     ## REFERENCE PLACEMENTS
     oMgoal              = pin.SE3(Rot_ref,CoM_ref)
     framePlacements_ref = [robot.framePlacement(q_0, FRAME_ID).translation.copy() for FRAME_ID in FRAME_IDs]
     ## INITIALIZATION LOOP
     i           = 0
-    # q           = q_init.copy()
-    # dq          = np.ones(q_0.shape)
-    q           = pin.randomConfiguration(model)
-    dq          = np.random.rand(model.nv)*2-1
+    q           = q_init.copy()
+    # q           = pin.randomConfiguration(model)
     while True :
         # Run the algorithms that outputs values in data
-        pin.framesForwardKinematics(model,data,q)
-        pin.computeJointJacobians(model,data,q)
+        robot.framesForwardKinematics(q)
+        robot.computeJointJacobians(q)
         ## CURRENT CONFIGURATION
         # CoM         = robot.com(q).copy()
         # oMtool          = robot.framePlacement(q,IDX_TOOL)
@@ -55,15 +60,25 @@ def computeJointsConfiguration(Rot_ref, CoM_ref, q_init, K=1, q_0=robot.q0, epsi
         oMtool          = data.oMf[IDX_TOOL].copy()
         framePlacements = [data.oMf[FRAME_ID].translation.copy() for FRAME_ID in FRAME_IDs]
         ## ERROR
-        err         = computeError(oMgoal, oMtool, framePlacements_ref, framePlacements)
+        # err         = computeError(oMgoal, oMtool, framePlacements_ref, framePlacements)
+        L_err         = computeErrors(oMgoal, oMtool, framePlacements_ref, framePlacements)
         ## JACOBIAN FROM CURRENT CONFIGURATION
-        J           = computeJacobian(q, IDX_TOOL, FRAME_IDs)
+        # J           = computeJacobian(q, IDX_TOOL, FRAME_IDs)
+        L_J           = computeJacobians(q, IDX_TOOL, FRAME_IDs)
         ## UPDATE CONFIGURATION
-        vq          = -K*pinv(J)@err
-        q           = pin.integrate(model,q, vq * DT)
+        # vq          = pinv(J)@(-K*err)
+        vq =  0
+        for i, err in enumerate(L_err):
+            if i==0 :
+                Ptool = np.eye(robot.nv)
+                vq =  pinv(L_J[i]) @ (-K*L_err[i])
+            else :
+                Ptool -= pinv(L_J[i-1] @ Ptool) @ L_J[i-1] @ Ptool
+                vq += pinv(L_J[i] @ Ptool) @ (-K*L_err[i] - L_J[i] @ vq)
+        q = pin.integrate(model,q, vq * DT)
         ## UPDATE LOOP
         i+=1
-        # if not i%100: print(f"norm(err) = {norm(err)}")
+        if not i%1000: print(f"norm(err) = {norm(err)}")
         if norm(err) < epsilon:
             success = True
             break
@@ -71,7 +86,7 @@ def computeJointsConfiguration(Rot_ref, CoM_ref, q_init, K=1, q_0=robot.q0, epsi
             success = False
             break
     if success:
-        print("Convergence achieved!")
+        print(f"Convergence achieved in {i} turns!")
     else:
         print("\nWarning: the iterative algorithm has not reached convergence to the desired precision")
     return q, vq
