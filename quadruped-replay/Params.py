@@ -1,0 +1,22 @@
+'''This class stores parameters about the replay'''
+import numpy as np
+
+class Params():
+    def __init__(self):
+        # Replay parameters
+        # self.replay_path = "demo_replay.npz"
+        # self.replay_path = 'converted.simple_jumping.npz'
+        # self.replay_path = 'converted.yaw_jumping.npz'
+        self.replay_path = 'converted.half_backflip.npz'
+        self.SIMULATION = True  # Run the replay in simulation if True
+        self.LOGGING = False  # Save the logs of the experiments if True
+        self.PLOTTING = True  # Plot the logs of the experiments if True
+
+        # Control parameters
+        self.dt = 0.001  # Time step of the replay
+        self.Kp = np.array([6.0, 6.0, 6.0])  # Proportional gains for the PD+
+        self.Kd = np.array([0.3, 0.3, 0.3])  # Derivative gains for the PD+
+        self.Kff = 1.0  # Feedforward torques multiplier for the PD+
+
+        # Other parameters
+        self.config_file = "config_solo12.yaml"  #  Name of the yaml file containing hardware information
