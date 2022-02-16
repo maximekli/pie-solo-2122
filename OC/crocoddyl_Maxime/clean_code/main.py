@@ -61,7 +61,7 @@ solver.solve(xs, us, 200, False)
 # Save result in .npz file if requested
 if SAVE:
     np.savez(datetime.datetime.now().strftime('%Y%m%d%H%M%S') + '.npz',
-             xs=xs, us=us
+             xs=solver.xs, us=solver.us
              )
 
 # Display the entire motion
