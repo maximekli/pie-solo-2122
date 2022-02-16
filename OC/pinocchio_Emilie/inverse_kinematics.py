@@ -68,13 +68,13 @@ def computeJointsConfiguration(Rot_ref, CoM_ref, q_init, K=1, q_0=robot.q0, epsi
         ## UPDATE CONFIGURATION
         # vq          = pinv(J)@(-K*err)
         vq =  0
-        for i, err in enumerate(L_err):
-            if i==0 :
+        for k, err in enumerate(L_err):
+            if k==0 :
                 Ptool = np.eye(robot.nv)
-                vq =  pinv(L_J[i]) @ (-K*L_err[i])
+                vq =  pinv(L_J[k]) @ (-K*L_err[k])
             else :
-                Ptool -= pinv(L_J[i-1] @ Ptool) @ L_J[i-1] @ Ptool
-                vq += pinv(L_J[i] @ Ptool) @ (-K*L_err[i] - L_J[i] @ vq)
+                Ptool -= pinv(L_J[k-1] @ Ptool) @ L_J[k-1] @ Ptool
+                vq += pinv(L_J[k] @ Ptool) @ (-K*L_err[k] - L_J[k] @ vq)
         q = pin.integrate(model,q, vq * DT)
         ## UPDATE LOOP
         i+=1
