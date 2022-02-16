@@ -736,6 +736,7 @@ class PyBulletSimulator():
         tau_pd = self.P * (self.q_des - self.joints.positions) + self.D * (self.v_des - self.joints.velocities)
 
         # Save desired torques in a storage array
+        # TODO: add torque saturation
         self.jointTorques = tau_pd + self.tau_ff
 
         # Set control torque for all joints
