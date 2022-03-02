@@ -53,6 +53,9 @@ def replay_loop():
     # INITIALIZATION ***************************************************
     device, logger, qc = initialize(params, replay.q0, replay.tau0, replay.N)
 
+    # PUT ON THE FLOOR
+    put_on_the_floor(device, params, replay.q0, replay.tau0)
+
     # REPLAY LOOP ***************************************************
     k = 0
     while ((not device.is_timeout) and (k < replay.N)):
