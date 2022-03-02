@@ -18,7 +18,7 @@ from inverse_kinematics import *
 #  INITIALIZATION SIMULATION  ##
 ################################
 
-Q, vQ = computeTrajectory()
+# Q, vQ = computeTrajectory()
     
 # If True then we will sleep in the main loop to have a 1:1 ratio of (elapsed real time / elapsed time in the
 # simulation)
@@ -58,25 +58,42 @@ for i in range(1000+len(T)+1000):
     # ''' JUMP TRAJECTORY '''
     elif (1000 <= i) and (i < 1000+len(T)) :
         # Parameters for the PD controller
-        Kp      = 8
-        Kd      = 0.06
+        # Kp      = 8
+        # Kd      = 0.06
 
-        # Joints configuration
-        _ , vq  = vQ[i-1000]
-        msg, q  = Q[i-1000]
-        print(f"{i} : {msg}")
+        # # Joints configuration
+        # vq  = vQ[i-1000]
+        # q  = Q[i-1000]
+        
+        # # Get position and velocity of all joints in PyBullet (free flying base + motors)
+        # qa, qa_dot  = getPosVelJoints(robotId, revoluteJointIndices)
+        # qa          = qa[7:]
+        # qa_dot      = qa_dot[6:]
 
-        # Get position and velocity of all joints in PyBullet (free flying base + motors)
+        # # Target position and velocity for all joints
+        # qa_ref      = np.array([q[7:]]).T  # target angular positions for the motors
+        # qa_dot_ref  = np.array([vq[6:]]).T  # target angular velocities for the motors
+
+        # # Call controller to get torques for all joints
+        # jointTorques = PD(qa_ref, qa_dot_ref, qa, qa_dot, dt, Kp, Kd, torques_sat, torques_ref)
+        
         qa, qa_dot  = getPosVelJoints(robotId, revoluteJointIndices)
-        qa          = qa[7:]
-        qa_dot      = qa_dot[6:]
+        qa_dot_dot = 0*qa_dot if i==1000 else pinv(M) @ (tauq - b).T
+        Xs = [robot.framePlacement(qa,id).translation for id in FRAME_IDs]
+        Fb = np.array([f_x, 0, f_z])
+        Mb = model.inertias[1].inertia@np.array([0,2*np.pi/Tt,0])
+        D1 = np.concatenate([np.eye(3)]*4, axis=1)
+        D2 = np.concatenate([np.array([[0,Xi[2],-Xi[1]],[Xi[2],0,-Xi[0]],[Xi[1],0,-Xi[0]]]) for Xi in Xs], axis=1)
+        D = np.concatenate((D1,D2), axis=0)
+        Fe = pinv(D)@np.concatenate((Fb,Mb), axis=0)
 
-        # Target position and velocity for all joints
-        qa_ref      = np.array([q[7:]]).T  # target angular positions for the motors
-        qa_dot_ref  = np.array([vq[6:]]).T  # target angular velocities for the motors
+        M = pin.crba(model, data, qa)
+        b = pin.rnea(model, data, qa, qa_dot, np.zeros(robot.model.nv))
 
-        # Call controller to get torques for all joints
-        jointTorques = PD(qa_ref, qa_dot_ref, qa, qa_dot, dt, Kp, Kd, torques_sat, torques_ref)
+        L_J = computeJacobians(qa, IDX_TOOL, FRAME_IDs)
+        J = np.concatenate(L_J[0:-1], axis=0)
+        tauq = (M@qa_dot_dot).T + b -(J.T@Fe)
+        jointTorques = tauq[0,6:]
 
     # ''' GO BACK TO INITIALIZED POSITION '''
     else : 
@@ -99,20 +116,7 @@ for i in range(1000+len(T)+1000):
 
         # Call controller to get torques for all joints
         jointTorques = PD(qa_ref, qa_dot_ref, qa, qa_dot, dt, Kp, Kd, torques_sat, torques_ref)
-    
-    
-    '''
-    revoluteJointIndices = [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14]
-    JOINTS NAMES
-        0:  'FL_HAA'     1: 'FL_HFE'    2:  'FL_KFE'    3:  'FL_ANKLE'
-        4:  'FR_HAA'     5: 'FR_HFE'    6:  'FR_KFE'    7:  'FR_ANKLE'
-        8:  'HL_HAA'     9: 'HL_HFE'   10:  'HL_KFE'   11:  'HL_ANKLE'
-    12:  'HR_HAA'    13: 'HR_HFE'   14:  'HR_KFE'   15:  'HR_ANKLE'
-    model.nqs.tolist()
-    >> [0, 7, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-    model.nvs.tolist()
-    >> [0, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-    '''
+
     if i==1000 : print("JUMP BEGIN !")
     if i==1000+id_Ts : print("JUMP EFFECT !")
 
