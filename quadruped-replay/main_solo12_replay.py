@@ -37,6 +37,9 @@ class Replay():
         self.q0 = self.q[0, :]
         self.tau0 = self.FF[0, :] * self.tau[0, :]
 
+        self.q_end = params.q_end
+        self.tau_end = np.zeros(12)
+
 
 def replay_loop():
     """
@@ -82,6 +85,9 @@ def replay_loop():
 
         # Increment counter
         k += 1
+
+    # WAIT IN POSITION
+    wait_in_position(device, params, replay.q_end, replay.tau_end)
 
     # DAMPING TO GET ON THE GROUND PROGRESSIVELY *********************
     damping(device, params)

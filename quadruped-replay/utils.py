@@ -162,3 +162,39 @@ def shutdown(device, params, replay, logger):
         device.Stop()
 
     print("End of script")
+
+def wait_in_position(device, params, q, tau):
+    """Make the robot go to the specified position and wait for the user
+    to press the Enter key
+
+    Args:
+        device: wrapper to communicate with the robot
+        params: store control parameters
+        q: position of the robot
+        tau: torque after calibration
+    """
+
+    print("WAIT_IN_POSITION")
+
+    # lighter gains
+    Kp_pos = 3.
+    Kd_pos = 0.3
+
+    device.joints.set_position_gains(Kp_pos * np.ones(12))
+    device.joints.set_velocity_gains(Kd_pos * np.ones(12))
+    device.joints.set_desired_positions(q)
+    device.joints.set_desired_velocities(np.zeros(12))
+    device.joints.set_torques(tau)
+
+    print("Wait in position")
+    print(q)
+
+    i = threading.Thread(target=get_input)
+    i.start()
+    print("Press Enter to continue")
+
+    while i.is_alive():
+        device.parse_sensor_data()
+        device.send_command_and_wait_end_of_cycle(params.dt)
+
+    print("Continuing")

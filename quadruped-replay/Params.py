@@ -20,3 +20,16 @@ class Params():
 
         # Other parameters
         self.config_file = "config_solo12.yaml"  #  Name of the yaml file containing hardware information
+
+        # End position goal
+        solo_q0_flipped = np.array([-0.1, np.pi-0.8, np.pi-1.6,
+                                    0.1, np.pi-0.8, np.pi-1.6,
+                                    -0.1, np.pi-0.8, 1.6,
+                                    0.1, np.pi-0.8, 1.6])
+
+        solo_q0 = np.array([0.1, 0.8, -1.6,
+                            -0.1, 0.8, -1.6,
+                            0.1, -0.8, 1.6,
+                            -0.1, -0.8, 1.6])
+
+        self.q_end = solo_q0_flipped if 'half' in self.replay_path else solo_q0
