@@ -7,7 +7,10 @@ class Params():
         # self.replay_path = "demo_replay.npz"
         # self.replay_path = 'converted.simple_jumping.npz'
         # self.replay_path = 'converted.yaw_jumping.npz'
-        self.replay_path = 'converted.half_backflip.npz'
+        # self.replay_path = 'converted.half_backflip.npz'
+        # self.replay_path = 'converted.trimmed.simple_jumping.npz'
+        # self.replay_path = 'converted.trimmed.yaw_jumping.npz'
+        self.replay_path = 'converted.trimmed.half_backflip.npz'
         self.SIMULATION = True  # Run the replay in simulation if True
         self.LOGGING = False  # Save the logs of the experiments if True
         self.PLOTTING = True  # Plot the logs of the experiments if True
