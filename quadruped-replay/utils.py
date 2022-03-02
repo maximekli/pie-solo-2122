@@ -29,6 +29,7 @@ def put_on_the_floor(device, params, q_init, tau_init):
     device.joints.set_desired_positions(q_init)
     device.joints.set_desired_velocities(np.zeros(12))
     device.joints.set_torques(np.zeros(12))
+    device.joints.set_tau_sat(params.tau_sat)
 
     print("Init")
     print(q_init)
@@ -119,6 +120,7 @@ def damping(device, params):
         device.joints.set_desired_positions(np.zeros(12))
         device.joints.set_desired_velocities(np.zeros(12))
         device.joints.set_torques(np.zeros(12))
+        device.joints.set_tau_sat(params.tau_sat)
 
         # Send command to the robot
         device.send_command_and_wait_end_of_cycle(params.dt)
@@ -185,6 +187,7 @@ def wait_in_position(device, params, q, tau):
     device.joints.set_desired_positions(q)
     device.joints.set_desired_velocities(np.zeros(12))
     device.joints.set_torques(tau)
+    device.joints.set_tau_sat(params.tau_sat)
 
     print("Wait in position")
     print(q)

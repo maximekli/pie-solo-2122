@@ -32,6 +32,7 @@ class Replay():
         self.P = np.tile(params.Kp, (self.N, 4))  # N by 12
         self.D = np.tile(params.Kd, (self.N, 4))  # N by 12
         self.FF = np.tile(params.Kff, (self.N, 12))  # N by 12
+        self.tau_sat = params.tau_sat
 
         # Initial positions and torques
         self.q0 = self.q[0, :]
@@ -78,6 +79,7 @@ def replay_loop():
         device.joints.set_desired_positions(replay.q[k, :])
         device.joints.set_desired_velocities(replay.v[k, :])
         device.joints.set_torques(replay.FF[k, :] * replay.tau[k, :])
+        device.joints.set_tau_sat(replay.tau_sat)
 
         # Call logger if necessary
         if params.LOGGING or params.PLOTTING:

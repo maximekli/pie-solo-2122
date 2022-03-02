@@ -33,3 +33,6 @@ class Params():
                             -0.1, -0.8, 1.6])
 
         self.q_end = solo_q0_flipped if 'half' in self.replay_path else solo_q0
+
+        # Torque saturation
+        self.tau_sat = 2.5 # N.m
