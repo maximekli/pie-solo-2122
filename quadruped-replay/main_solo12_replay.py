@@ -29,8 +29,8 @@ class Replay():
         self.N = self.q.shape[0]
 
         # Control gains
-        self.P = np.tile(params.Kp, (self.N, 4))  # N by 12
-        self.D = np.tile(params.Kd, (self.N, 4))  # N by 12
+        self.P = replay['Kp'][:, 1:].transpose().copy() if 'Kp' in replay.files else np.tile(params.Kp, (self.N, 4))  # N by 12
+        self.D = replay['Kd'][:, 1:].transpose().copy() if 'Kd' in replay.files else np.tile(params.Kd, (self.N, 4))  # N by 12
         self.FF = np.tile(params.Kff, (self.N, 12))  # N by 12
         self.tau_sat = params.tau_sat
 
