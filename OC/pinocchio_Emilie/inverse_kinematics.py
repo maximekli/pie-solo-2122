@@ -18,8 +18,6 @@ frameNames  = ['FR_FOOT', 'FL_FOOT', 'HR_FOOT', 'HL_FOOT']
 FRAME_IDs   = [model.getFrameId(f) for f in frameNames]
 IDX_TOOL    = model.getFrameId('base_link')
 
-
-
 def computeJacobians(q, IDX_TOOL, FRAME_IDs):
     # J_CoM       = robot.Jcom(q).copy()
     J_CoM       = robot.computeFrameJacobian(q, IDX_TOOL).copy()
@@ -30,109 +28,85 @@ def computeErrors(oMgoal, oMtool, placements_ref, placements):
     err_CoM     = pin.log(oMtool.inverse()*oMgoal).vector
     err_Frames  = [Fi-Fi_ref for Fi, Fi_ref in zip(placements,placements_ref)]
     return err_Frames + [err_CoM]
-def stepJacobianIK(q, oMgoal, framePlacements_ref, K, DT):
+def stepIK_Jacobian(q, oMgoal, frameTrans_ref, K, DT):
     ## Run the algorithms that outputs values in data
     robot.framesForwardKinematics(q)
     robot.computeJointJacobians(q)
     ## CURRENT CONFIGURATION
-    oMtool          = pin.SE3(computeRot(q),computeCoM(q))
-    framePlacements = [data.oMf[FRAME_ID].translation.copy() for FRAME_ID in FRAME_IDs]
+    oMtool      = robot.framePlacement(q, IDX_TOOL)
+    frameTrans  = [data.oMf[FRAME_ID].translation.copy() for FRAME_ID in FRAME_IDs]
     ## ERROR
-    L_err           = computeErrors(oMgoal, oMtool, framePlacements_ref, framePlacements)
+    L_err       = computeErrors(oMgoal, oMtool, frameTrans_ref, frameTrans)
     ## JACOBIAN FROM CURRENT CONFIGURATION
-    L_J             = computeJacobians(q, IDX_TOOL, FRAME_IDs)
+    L_J         = computeJacobians(q, IDX_TOOL, FRAME_IDs)
     ## UPDATE CONFIGURATION
     for k, err in enumerate(L_err):
         Ptool = np.eye(robot.nv) if k==0 else Ptool-pinv(L_J[k-1] @ Ptool) @ L_J[k-1] @ Ptool
         vq =  pinv(L_J[k]) @ (-K*err) if k==0 else vq+pinv(L_J[k] @ Ptool) @ (-K*err - L_J[k] @ vq)
-    q = pin.integrate(model,q, vq * DT)
-    return q, vq
+    new_q = pin.integrate(model,q, vq * DT)
+    return new_q, vq
 
-def JacobianIK(Rot_ref, CoM_ref, q_init, K=-1, q_0=robot.q0, epsilon=1e-3, DT=dt, IT_MAX = 10000):
+def stepIK_InvGeom(oMbase, oMgoal, frameTrans_ref, delta):
+    ## INVERSE GEOMETRY FOR FEET
+    def cost(q):
+        '''Compute score from a configuration'''
+        frameTrans  = [robot.framePlacement(q,FRAME_ID).translation.copy() for FRAME_ID in FRAME_IDs]
+        frameErrors = [norm(Fi-Fi_ref) for Fi, Fi_ref in zip(frameTrans,frameTrans_ref)]
+        oMtool  = robot.framePlacement(q, IDX_TOOL)
+        return sum(frameErrors) + norm(pin.log(oMtool.inverse() * oMbase).vector)
+    q_12    = fmin_bfgs(cost, robot.q0)[7:]
+    q       = np.concatenate([pin.SE3ToXYZQUAT(oMbase),q_12])
+    oMtool  = robot.framePlacement(q, IDX_TOOL)
+    ## ERROR
+    err     = pin.log(oMtool.inverse()*oMgoal)
+    ## UPDATE CONFIGURATION
+    oMbase  = pin.exp(pin.log(oMbase)+delta*err)
+    new_q   = np.concatenate([pin.SE3ToXYZQUAT(oMbase),q_12])
+    return oMbase, new_q, err
+
+def inverseKinematic(Rot_ref, CoM_ref, q_init, K=-1, DT=dt, delta=0.1, q_0=robot.q0, epsilon=1e-3, IT_MAX = 100):
     ## REFERENCE PLACEMENTS
-    oMgoal              = pin.SE3(Rot_ref,CoM_ref)
-    framePlacements_ref = [robot.framePlacement(q_0, FRAME_ID).translation.copy() for FRAME_ID in FRAME_IDs]
+    oMgoal          = pin.SE3(Rot_ref,CoM_ref)
+    frameTrans_ref  = [robot.framePlacement(q_0, FRAME_ID).translation.copy() for FRAME_ID in FRAME_IDs]
     ## INITIALIZATION LOOP
     q       = q_init.copy()
+    oMbase  = robot.framePlacement(q, IDX_TOOL)
     herr    = []
     while True :
         ## IK STEP
-        # q, vq = stepJacobianIK(q, oMgoal, framePlacements_ref, K, DT)
-        vq = pinv(robot.Jcom(q))@(computeCoM(q)-CoM_ref)
-        q = pin.integrate(model,q, -10*K*vq)
+        # q, err = stepIK_Jacobian(q, oMgoal, frameTrans_ref, K, DT)
+        oMbase, q, err = stepIK_InvGeom(oMbase, oMgoal, frameTrans_ref, delta)
         ## UPDATE LOOP
-        if herr : K = -K if herr[-1]-norm(vq)< 0 else K
-        herr.append(norm(vq))
-        if not len(herr)%1000: print(f"norm(vq) = {norm(vq)}")
-        if (norm(vq) < epsilon)or(len(herr) >= IT_MAX): break
+        herr.append(norm(err))
+        if not len(herr)%1000: print(f"norm(err) = {norm(err)}")
+        if (norm(err) < epsilon)or(len(herr) >= IT_MAX): break
     if len(herr) < IT_MAX:
-        print(f"Convergence achieved in {len(herr)} turns with norm(err)={norm(computeCoM(q)-CoM_ref)}!")
+        print(f"Convergence achieved in {len(herr)} turns with norm(err)={norm(err)}!")
     else:
-        plt.title("Errors")
-        plt.ylabel("err")
-        plt.xlabel("iterations")
-        plt.plot(herr)
-        plt.show()
         print("\nWarning: the iterative algorithm has not reached convergence to the desired precision")
-    return q, vq
+    return q
 
-
-
-
-
-
-
-
-
-'''
-JOINTS NAMES
-    0:  'FL_HAA'     1: 'FL_HFE'    2:  'FL_KFE'    3:  'FL_ANKLE'
-    4:  'FR_HAA'     5: 'FR_HFE'    6:  'FR_KFE'    7:  'FR_ANKLE'
-    8:  'HL_HAA'     9: 'HL_HFE'   10:  'HL_KFE'   11:  'HL_ANKLE'
-   12:  'HR_HAA'    13: 'HR_HFE'   14:  'HR_KFE'   15:  'HR_ANKLE'
-model.nqs.tolist()
->> [0, 7, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-model.nvs.tolist()
->> [0, 6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-'''
-# 7+(0 mod 3) -> shoulders (not on x)
-# 7+1 -> FL_shoulder (pi/2 -> bras vers l'arrière)
-# 7+2 -> FL_knee (pi/2 -> avant bras vers l'arrière)
-# 7+4 -> FR_shoulder (pi/2 -> bras vers l'arrière)
-# 7+5 -> FR_knee (pi/2 -> avant bras vers l'arrière)
-# 7+7 -> HL_shoulder (pi/2 -> bras vers l'arrière)
-# 7+8 -> HL_knee (pi/2 -> avant bras vers l'arrière)
-# 7+10 -> HR_shoulder (pi/2 -> bras vers l'arrière)
-# 7+11 -> HR_knee (pi/2 -> avant bras vers l'arrière)
-
-down    = lambda t :np.diag([1]*7   +   [0  ,1+t/Ts ,1+t/Ts ]*2 +   [0  ,1+0.4*t/Ts ,1+0.4*t/Ts ]*2 )
-down_up = lambda t :np.diag([1]*7   +   [0  ,1-0.4*t/Ts ,1-0.4*t/Ts ]*2 +   [0  ,1-t/Ts     ,1-t/Ts     ]*2 )
-up      = lambda t :np.diag([1]*7   +   [0  ,1-t/Ts ,1-t/Ts ]*2 +   [0  ,1-t/Ts     ,1-t/Ts     ]*2 )
 
 def computeTrajectory(q_0=robot.q0, T=T):
     Q = []
-    vQ = []
     q = q_0.copy()
-    vq = v_0.copy()
     CoM = CoM_0
     for t in T:
         if t<=Ts:
-            prev_CoM = CoM.copy()
             CoM = X_CoM(t)
             Rot = Rot_CoM(t)
             Q.append(q.copy())
-            vQ.append(vq.copy())
-            q, vq = JacobianIK(Rot, CoM, q)
-            # q = down(t)@q_0 if t<0.3*Ts else (down_up(t)@q_0 if t<0.7*Ts else up(t)@q_0)
+            q = inverseKinematic(Rot, CoM, q)
             print(f"Time : t={t}")
         else:
-            Q.append((1.5*q_0).copy())
-            vQ.append(v_0.copy())
-    return Q, vQ
+            Q.append((q_0).copy())
+    np.save('Q.npy', Q, allow_pickle=True)
+    return Q
+
 
 
 def plot_controlledTrajectory(q_0=robot.q0, T=T, dt=dt):
-    Q, vQ = computeTrajectory(q_0=q_0, T=T)
+    Q = np.load('Q.npy', allow_pickle=True)
     L_X_CoM = []
     prev_X_CoM = CoM_0.copy()
     prev_V_CoM = v_CoM_0.copy()
@@ -162,6 +136,7 @@ def plot_controlledTrajectory(q_0=robot.q0, T=T, dt=dt):
     plt.show(block=False)
     fig3, ax3 = plt.subplots()
     ax3.plot(T,Q)
+    for qi in Q[id_Ts,:]: ax3.plot(T[id_Ts],qi,'ro')
     ax3.set_title("Q")
     ax3.set_ylabel("configurations")
     ax3.set_xlabel("time")

@@ -1,3 +1,4 @@
+from cProfile import label
 import numpy as np
 import matplotlib.pyplot as plt
 import example_robot_data
@@ -10,11 +11,11 @@ data    = robot.data
 
 q_0     = robot.q0.copy()
 v_0     = robot.v0.copy()
-CoM_0   = computeCoM(q_0) #robot.com(q_0).copy()
+CoM_0   = robot.com(q_0).copy()
 v_CoM_0 = robot.vcom(q_0,v_0).copy()
 
 dt      = 1e-3
-Ts      = 0.5
+Ts      = 0.2
 L       = 1
 h       = 1
 g       = model.gravity.linear
@@ -47,14 +48,22 @@ Rot_CoM = lambda t : tangage(2*np.pi/Tt*t)
 def plot_modelTrajectory(T=T):
     fig1, ax1 = plt.subplots()
     L_CoM = np.array([X_CoM(t) for t in T])
-    ax1.plot(T,L_CoM)
+    ax1.plot(T,L_CoM[:,0],label="x")
+    ax1.plot(T,L_CoM[:,1],label="y")
+    ax1.plot(T,L_CoM[:,2],label="z")
     ax1.plot(T[id_Ts],L_CoM[id_Ts][0],'ro')
     ax1.plot(T[id_Ts],L_CoM[id_Ts][1],'ro')
-    ax1.plot(T[id_Ts],L_CoM[id_Ts][2],'ro')
+    ax1.plot(T[id_Ts],L_CoM[id_Ts][2],'ro', label="liftoff")
+    ax1.set_xlabel("t")
+    ax1.set_title("CoM trajectory over time")
+    ax1.legend()
     plt.show(block=False)
     fig2, ax2 = plt.subplots()
     ax2.plot(L_CoM[:,0],L_CoM[:,2])
     L_CoM = np.array([X_CoM(t) for k, t in enumerate(T) if not k%100])
     V_CoM = np.array([Rot_CoM(t).dot(np.array([1,0,0])) for k, t in enumerate(T) if not k%100])
     ax2.quiver(L_CoM[:,0], L_CoM[:,2], V_CoM[:,0], V_CoM[:,2])
+    ax2.set_xlabel("x")
+    ax2.set_ylabel("z")
+    ax2.set_title("CoM geometrical trajectory")
     plt.show()
