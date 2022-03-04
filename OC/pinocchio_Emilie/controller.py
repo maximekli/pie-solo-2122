@@ -47,11 +47,12 @@ def c_salto_IK(q, qdot, dt, robot, t_simu):
     ID_BASE = robot.model.getFrameId("base_link")
 
     # Desired feet xyz positions and CoM xyz trajectory
-    xzdes_FL = robot.framePlacement(q_0, ID_FL).translation
-    xzdes_HR = robot.framePlacement(q_0, ID_HR).translation
-    xzdes_FR = robot.framePlacement(q_0, ID_FR).translation
-    xzdes_HL = robot.framePlacement(q_0, ID_HL).translation
-    oMdes_BASE = pin.SE3(Rot_CoM(t_simu), X_CoM(t_simu))
+    xyzdes__FL = robot.framePlacement(q_0, ID_FL).translation
+    xyzdes__HR = robot.framePlacement(q_0, ID_HR).translation
+    xyzdes__FR = robot.framePlacement(q_0, ID_FR).translation
+    xyzdes__HL = robot.framePlacement(q_0, ID_HL).translation
+    # oMdes_BASE = pin.SE3(Rot_CoM(t_simu), X_CoM(t_simu))
+    xyzdes__BASE = X_CoM(t_simu)
 
     while True:
         # Compute/update all the joints and frames
@@ -59,25 +60,28 @@ def c_salto_IK(q, qdot, dt, robot, t_simu):
         pin.updateFramePlacements(robot.model, robot.data)
 
         # Get the current xyz position of each foot and the CoM xyz coordinates 
-        xz_FL = robot.data.oMf[ID_FL].translation
-        xz_FR = robot.data.oMf[ID_FR].translation
-        xz_HL = robot.data.oMf[ID_HL].translation
-        xz_HR = robot.data.oMf[ID_HR].translation
-        oM_BASE = robot.data.oMf[ID_BASE]
+        xyz_FL = robot.data.oMf[ID_FL].translation
+        xyz_FR = robot.data.oMf[ID_FR].translation
+        xyz_HL = robot.data.oMf[ID_HL].translation
+        xyz_HR = robot.data.oMf[ID_HR].translation
+        # oM_BASE = robot.data.oMf[ID_BASE]
+        xyz_BASE = robot.data.oMf[ID_BASE].translation
 
         # Computing the local Jacobian into the global frame
         oR_FL = robot.data.oMf[ID_FL].rotation
         oR_FR = robot.data.oMf[ID_FR].rotation
         oR_HL = robot.data.oMf[ID_HL].rotation
         oR_HR = robot.data.oMf[ID_HR].rotation
-        oA_BASE = robot.data.oMf[ID_BASE].action
+        # oA_BASE = robot.data.oMf[ID_BASE].action
+        oR_BASE = robot.data.oMf[ID_BASE].rotation
 
         # Calculating the error
-        err_FL = xz_FL - xzdes_FL
-        err_FR = xz_FR - xzdes_FR
-        err_HL = xz_HL - xzdes_HL
-        err_HR = xz_HR - xzdes_HR
-        err_BASE = pin.log(oM_BASE.inverse()*oMdes_BASE).vector
+        err_FL = xyz_FL - xyzdes__FL
+        err_FR = xyz_FR - xyzdes__FR
+        err_HL = xyz_HL - xyzdes__HL
+        err_HR = xyz_HR - xyzdes__HR
+        # err_BASE = pin.log(oM_BASE.inverse()*oMdes_BASE).vector
+        err_BASE =  xyz_BASE - xyzdes__BASE
 
         # Getting the different Jacobians
         fJ_FL3  = pin.computeFrameJacobian(robot.model, robot.data, q_ref, ID_FL)[:3, -12:]  # Take only the translation terms
@@ -96,9 +100,13 @@ def c_salto_IK(q, qdot, dt, robot, t_simu):
         oJ_HR3  = oR_HR @ fJ_HR3
         oJ_HR   = oJ_HR3[:, -12:]
 
-        fJ_BASE6 = pin.computeFrameJacobian(robot.model, robot.data, q_ref, ID_BASE)[:, -12:]  # Take all terms
-        oJ_BASE6 = oA_BASE @ fJ_BASE6  # Transformation from local frame to world frame
-        oJ_BASE  = oJ_BASE6[:, -12:]
+        # fJ_BASE6 = pin.computeFrameJacobian(robot.model, robot.data, q_ref, ID_BASE)[:, -12:]  # Take all terms
+        # oJ_BASE6 = oA_BASE @ fJ_BASE6  # Transformation from local frame to world frame
+        # oJ_BASE  = oJ_BASE6[:, -12:]
+
+        fJ_BASE3 = pin.computeFrameJacobian(robot.model, robot.data, q_ref, ID_BASE)[:3, -12:]  # Take only the translation terms
+        oJ_BASE3 = oR_BASE @ fJ_BASE3  # Transformation from local frame to world frame
+        oJ_BASE  = oJ_BASE3[:, -12:]
 
         # Displacement error
         nu = np.concatenate([err_FL, err_FR, err_HL, err_HR, err_BASE])
