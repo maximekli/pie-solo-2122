@@ -19,30 +19,37 @@ FRAME_IDs   = [model.getFrameId(f) for f in frameNames]
 IDX_TOOL    = model.getFrameId('base_link')
 
 def computeJacobians(q, IDX_TOOL, FRAME_IDs):
-    # J_CoM       = robot.Jcom(q).copy()
-    J_CoM       = robot.computeFrameJacobian(q, IDX_TOOL).copy()
-    J_Frames    = [robot.computeFrameJacobian(q, FRAME_ID)[:3].copy() for FRAME_ID in FRAME_IDs]
-    return J_Frames + [J_CoM]
+    fJ = pin.computeFrameJacobian(model, data, q, IDX_TOOL)[:, -12:]  # Take all terms
+    oA = robot.data.oMf[IDX_TOOL].action
+    oJ = oA @ fJ  # Transformation from local frame to world frame
+    J = [oJ[:, -12:]]
+    for FRAME_ID in FRAME_IDs:
+        fJ  = pin.computeFrameJacobian(model, data, q, FRAME_ID)[:3, -12:]  # Take only the translation terms
+        oR = data.oMf[FRAME_ID].rotation
+        oJ = oR @ fJ  # Transformation from local frame to world frame
+        J.append(oJ[:, -12:])
+    return J
 def computeErrors(oMgoal, oMtool, placements_ref, placements):
-    # err_CoM     = CoM - CoM_ref
     err_CoM     = pin.log(oMtool.inverse()*oMgoal).vector
     err_Frames  = [Fi-Fi_ref for Fi, Fi_ref in zip(placements,placements_ref)]
-    return err_Frames + [err_CoM]
+    return [err_CoM] + err_Frames
 def stepIK_Jacobian(q, oMgoal, frameTrans_ref, K, DT):
     ## Run the algorithms that outputs values in data
-    robot.framesForwardKinematics(q)
-    robot.computeJointJacobians(q)
+    pin.forwardKinematics(model, data, q)
+    pin.updateFramePlacements(model, data)
     ## CURRENT CONFIGURATION
-    oMtool      = robot.framePlacement(q, IDX_TOOL)
+    oMtool      = data.oMf[IDX_TOOL]
     frameTrans  = [data.oMf[FRAME_ID].translation.copy() for FRAME_ID in FRAME_IDs]
     ## ERROR
     L_err       = computeErrors(oMgoal, oMtool, frameTrans_ref, frameTrans)
     ## JACOBIAN FROM CURRENT CONFIGURATION
     L_J         = computeJacobians(q, IDX_TOOL, FRAME_IDs)
     ## UPDATE CONFIGURATION
-    for k, err in enumerate(L_err):
-        Ptool = np.eye(robot.nv) if k==0 else Ptool-pinv(L_J[k-1] @ Ptool) @ L_J[k-1] @ Ptool
-        vq =  pinv(L_J[k]) @ (-K*err) if k==0 else vq+pinv(L_J[k] @ Ptool) @ (-K*err - L_J[k] @ vq)
+    err = np.concatenate(L_err)
+    J = np.concatenate(L_J)
+    vq = -K * pinv(J) @ err
+    vq = vq.reshape((12,1))
+    vq = np.concatenate((np.zeros((6,1)), vq))
     new_q = pin.integrate(model,q, vq * DT)
     return new_q, vq
 
@@ -64,18 +71,18 @@ def stepIK_InvGeom(oMbase, oMgoal, frameTrans_ref, delta):
     new_q   = np.concatenate([pin.SE3ToXYZQUAT(oMbase),q_12])
     return oMbase, new_q, err
 
-def inverseKinematic(Rot_ref, CoM_ref, q_init, K=-1, DT=dt, delta=0.1, q_0=robot.q0, epsilon=1e-3, IT_MAX = 100):
+def inverseKinematic(Rot_ref, CoM_ref, q_init, K=100, DT=dt, delta=0.1, q_0=robot.q0, epsilon=1e-3, IT_MAX = 100):
     ## REFERENCE PLACEMENTS
     oMgoal          = pin.SE3(Rot_ref,CoM_ref)
     frameTrans_ref  = [robot.framePlacement(q_0, FRAME_ID).translation.copy() for FRAME_ID in FRAME_IDs]
     ## INITIALIZATION LOOP
     q       = q_init.copy()
-    oMbase  = robot.framePlacement(q, IDX_TOOL)
+    oMbase  = robot.framePlacement(q, IDX_TOOL).copy()
     herr    = []
     while True :
         ## IK STEP
-        # q, err = stepIK_Jacobian(q, oMgoal, frameTrans_ref, K, DT)
-        oMbase, q, err = stepIK_InvGeom(oMbase, oMgoal, frameTrans_ref, delta)
+        q, err = stepIK_Jacobian(q, oMgoal, frameTrans_ref, K, DT)
+        # oMbase, q, err = stepIK_InvGeom(oMbase, oMgoal, frameTrans_ref, delta)
         ## UPDATE LOOP
         herr.append(norm(err))
         if not len(herr)%1000: print(f"norm(err) = {norm(err)}")
@@ -97,7 +104,6 @@ def computeTrajectory(q_0=robot.q0, T=T):
             Rot = Rot_CoM(t)
             Q.append(q.copy())
             q = inverseKinematic(Rot, CoM, q)
-            print(f"Time : t={t}")
         else:
             Q.append((q_0).copy())
     np.save('Q.npy', Q, allow_pickle=True)

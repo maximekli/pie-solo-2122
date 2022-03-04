@@ -1,15 +1,150 @@
 # coding: utf8
 
 # Other modules
+from re import I
 import numpy as np
 # Pinocchio modules
 import pinocchio as pin  # Pinocchio library
 
 from PD import PD
 
-################
-#  CONTROLLER ##
-################
+######################
+## SALTO_CONTROLLER ##
+######################
+
+# Method : Inverse Kinematics
+# Robot : Solo12
+
+def c_salto_IK(q, qdot, dt, robot, t_simu):
+    # unactuated, [x, y, z] position of the base + [x, y, z, w] orientation of the base (stored as a quaternion)
+    # qu = q[:7]
+    qa = q[7:]  # actuated, [q1, q2, ..., q8] angular position of the 8 motors
+    # [v_x, v_y, v_z] linear velocity of the base and [w_x, w_y, w_z] angular velocity of the base along x, y, z axes
+    # of the world
+    # qu_dot = qdot[:6]
+    qa_dot = qdot[6:]  # angular velocity of the 8 motors
+
+    qa_ref = np.zeros((12, 1))  # target angular positions for the motors
+    qa_dot_ref = np.zeros((12, 1))  # target angular velocities for the motors
+
+    from numpy.linalg import pinv, norm
+    from model_com import X_CoM, Rot_CoM
+
+    # Initialization of the parameters for inverse kinematics
+    MAX_IT = 100
+    i = 0
+    epsilon = 1e-3
+    K = 100.  # Convergence gain
+    q_0 = robot.q0.copy()
+    q_ref = q.copy()
+
+    # Get the frame index of each foot
+    ID_FL = robot.model.getFrameId("FL_FOOT")
+    ID_FR = robot.model.getFrameId("FR_FOOT")
+    ID_HL = robot.model.getFrameId("HL_FOOT")
+    ID_HR = robot.model.getFrameId("HR_FOOT")
+    # Get the frame index of the base link
+    ID_BASE = robot.model.getFrameId("base_link")
+
+    # Desired feet xyz positions and CoM xyz trajectory
+    xzdes_FL = robot.framePlacement(q_0, ID_FL).translation
+    xzdes_HR = robot.framePlacement(q_0, ID_HR).translation
+    xzdes_FR = robot.framePlacement(q_0, ID_FR).translation
+    xzdes_HL = robot.framePlacement(q_0, ID_HL).translation
+    oMdes_BASE = pin.SE3(Rot_CoM(t_simu), X_CoM(t_simu))
+
+    while True:
+        # Compute/update all the joints and frames
+        pin.forwardKinematics(robot.model, robot.data, q_ref)
+        pin.updateFramePlacements(robot.model, robot.data)
+
+        # Get the current xyz position of each foot and the CoM xyz coordinates 
+        xz_FL = robot.data.oMf[ID_FL].translation
+        xz_FR = robot.data.oMf[ID_FR].translation
+        xz_HL = robot.data.oMf[ID_HL].translation
+        xz_HR = robot.data.oMf[ID_HR].translation
+        oM_BASE = robot.data.oMf[ID_BASE]
+
+        # Computing the local Jacobian into the global frame
+        oR_FL = robot.data.oMf[ID_FL].rotation
+        oR_FR = robot.data.oMf[ID_FR].rotation
+        oR_HL = robot.data.oMf[ID_HL].rotation
+        oR_HR = robot.data.oMf[ID_HR].rotation
+        oA_BASE = robot.data.oMf[ID_BASE].action
+
+        # Calculating the error
+        err_FL = xz_FL - xzdes_FL
+        err_FR = xz_FR - xzdes_FR
+        err_HL = xz_HL - xzdes_HL
+        err_HR = xz_HR - xzdes_HR
+        err_BASE = pin.log(oM_BASE.inverse()*oMdes_BASE).vector
+
+        # Getting the different Jacobians
+        fJ_FL3  = pin.computeFrameJacobian(robot.model, robot.data, q_ref, ID_FL)[:3, -12:]  # Take only the translation terms
+        oJ_FL3  = oR_FL @ fJ_FL3  # Transformation from local frame to world frame
+        oJ_FL   = oJ_FL3[:, -12:]
+
+        fJ_FR3  = pin.computeFrameJacobian(robot.model, robot.data, q_ref, ID_FR)[:3, -12:]
+        oJ_FR3  = oR_FR @ fJ_FR3
+        oJ_FR   = oJ_FR3[:, -12:]
+
+        fJ_HL3  = pin.computeFrameJacobian(robot.model, robot.data, q_ref, ID_HL)[:3, -12:]
+        oJ_HL3  = oR_HL @ fJ_HL3
+        oJ_HL   = oJ_HL3[:, -12:]
+
+        fJ_HR3  = pin.computeFrameJacobian(robot.model, robot.data, q_ref, ID_HR)[:3, -12:]
+        oJ_HR3  = oR_HR @ fJ_HR3
+        oJ_HR   = oJ_HR3[:, -12:]
+
+        fJ_BASE6 = pin.computeFrameJacobian(robot.model, robot.data, q_ref, ID_BASE)[:, -12:]  # Take all terms
+        oJ_BASE6 = oA_BASE @ fJ_BASE6  # Transformation from local frame to world frame
+        oJ_BASE  = oJ_BASE6[:, -12:]
+
+        # Displacement error
+        nu = np.concatenate([err_FL, err_FR, err_HL, err_HR, err_BASE])
+
+        # Making a single Jacobian vector
+        J = np.concatenate([oJ_FL, oJ_FR, oJ_HL, oJ_HR, oJ_BASE])
+
+        # Computing the velocity
+        qa_dot_ref = -K * pinv(J) @ nu
+        qa_dot_ref = qa_dot_ref.reshape((12,1))
+        q_dot_ref = np.concatenate((np.zeros((6,1)), qa_dot_ref))
+
+        # Computing the updated configuration
+        q_ref = pin.integrate(robot.model, q_ref, q_dot_ref * dt)
+        qa_ref = q_ref[7:]
+        qa_ref = qa_ref.reshape((12,1))
+        i += 1
+
+        if norm(q_dot_ref) < epsilon : break
+        elif i > MAX_IT :
+            print("Warning: convergence not reached")
+            break
+
+    # End of the control code
+    ###############################################
+
+    # Parameters for the PD controller
+    Kp = 8.
+    Kd = 0.06
+    torque_sat = 3  # torque saturation in N.m
+    torques_ref = np.zeros((12, 1))  # feedforward torques
+
+    # Call the PD controller
+    torques = PD(qa_ref, qa_dot_ref, qa, qa_dot, dt, Kp, Kd, torque_sat, torques_ref)
+
+    # torques must be a numpy array of shape (12, 1) containing the torques applied to the 12 motors
+    return torques
+
+
+
+#######################
+## PUSHUP CONTROLLER ##
+#######################
+
+# Method : No method
+# Robot : Solo8
 
 def pushup(up, q, qdot, dt):
     # unactuated, [x, y, z] position of the base + [x, y, z, w] orientation of the base (stored as a quaternion)
@@ -102,6 +237,14 @@ def pushup(up, q, qdot, dt):
     return up, torques
 
 
+
+#########################
+## STANDING CONTROLLER ##
+#########################
+
+# Method : PD
+# Robot : Solo8
+
 def c(q, qdot, dt):
     # unactuated, [x, y, z] position of the base + [x, y, z, w] orientation of the base (stored as a quaternion)
     # qu = q[:7]
@@ -134,11 +277,14 @@ def c(q, qdot, dt):
     return torques
 
 
+
+
 ########################
 ## WALKING_CONTROLLER ##
 ########################
 
 # Method : Inverse Kinematics
+# Robot : Solo8
 
 # Initialization of the controller's parameters
 q_ref = np.zeros((15, 1))
@@ -226,19 +372,19 @@ def c_walking_IK(q, qdot, dt, solo, t_simu):
     oR_HR = solo.data.oMf[ID_HR].rotation
 
     # Getting the different Jacobians
-    fJ_FL3 = pin.frameJacobian(solo.model, solo.data, q_ref, ID_FL)[:3, -8:]  # Take only the translation terms
+    fJ_FL3 = pin.computeFrameJacobian(solo.model, solo.data, q_ref, ID_FL)[:3, -8:]  # Take only the translation terms
     oJ_FL3 = oR_FL * fJ_FL3  # Transformation from local frame to world frame
     oJ_FLxz = oJ_FL3[0::2, -8:]  # Take the x and z components
 
-    fJ_FR3 = pin.frameJacobian(solo.model, solo.data, q_ref, ID_FR)[:3, -8:]
+    fJ_FR3 = pin.computeFrameJacobian(solo.model, solo.data, q_ref, ID_FR)[:3, -8:]
     oJ_FR3 = oR_FR * fJ_FR3
     oJ_FRxz = oJ_FR3[0::2, -8:]
 
-    fJ_HL3 = pin.frameJacobian(solo.model, solo.data, q_ref, ID_HL)[:3, -8:]
+    fJ_HL3 = pin.computeFrameJacobian(solo.model, solo.data, q_ref, ID_HL)[:3, -8:]
     oJ_HL3 = oR_HL * fJ_HL3
     oJ_HLxz = oJ_HL3[0::2, -8:]
 
-    fJ_HR3 = pin.frameJacobian(solo.model, solo.data, q_ref, ID_HR)[:3, -8:]
+    fJ_HR3 = pin.computeFrameJacobian(solo.model, solo.data, q_ref, ID_HR)[:3, -8:]
     oJ_HR3 = oR_HR * fJ_HR3
     oJ_HRxz = oJ_HR3[0::2, -8:]
 
@@ -275,7 +421,13 @@ def c_walking_IK(q, qdot, dt, solo, t_simu):
     return torques
 
 
+
+########################
+## WALKING_CONTROLLER ##
+########################
+
 # Method : Inverse Dynamics
+# Robot : Solo8
 
 # Initialization of the controller's parameters
 q_dot_ref = np.zeros((14, 1))
@@ -365,19 +517,19 @@ def c_walking_ID(q, qdot, dt, solo, t_simu):
     oR_HR = solo.data.oMf[ID_HR].rotation
 
     # Getting the different Jacobians
-    fJ_FL3 = pin.frameJacobian(solo.model, solo.data, q_ref, ID_FL)[:3, -8:]  #Take only the translation terms
+    fJ_FL3 = pin.computeFrameJacobian(solo.model, solo.data, q_ref, ID_FL)[:3, -8:]  #Take only the translation terms
     oJ_FL3 = oR_FL * fJ_FL3  #Transformation from local frame to world frame
     oJ_FLxz = oJ_FL3[0::2, -8:]  #Take the x and z components
 
-    fJ_FR3 = pin.frameJacobian(solo.model, solo.data, q_ref, ID_FR)[:3, -8:]
+    fJ_FR3 = pin.computeFrameJacobian(solo.model, solo.data, q_ref, ID_FR)[:3, -8:]
     oJ_FR3 = oR_FR * fJ_FR3
     oJ_FRxz = oJ_FR3[0::2, -8:]
 
-    fJ_HL3 = pin.frameJacobian(solo.model, solo.data, q_ref, ID_HL)[:3, -8:]
+    fJ_HL3 = pin.computeFrameJacobian(solo.model, solo.data, q_ref, ID_HL)[:3, -8:]
     oJ_HL3 = oR_HL * fJ_HL3
     oJ_HLxz = oJ_HL3[0::2, -8:]
 
-    fJ_HR3 = pin.frameJacobian(solo.model, solo.data, q_ref, ID_HR)[:3, -8:]
+    fJ_HR3 = pin.computeFrameJacobian(solo.model, solo.data, q_ref, ID_HR)[:3, -8:]
     oJ_HR3 = oR_HR * fJ_HR3
     oJ_HRxz = oJ_HR3[0::2, -8:]
 
