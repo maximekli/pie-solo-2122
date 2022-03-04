@@ -29,13 +29,17 @@ class Replay():
         self.N = self.q.shape[0]
 
         # Control gains
-        self.P = np.tile(params.Kp, (self.N, 4))  # N by 12
-        self.D = np.tile(params.Kd, (self.N, 4))  # N by 12
+        self.P = replay['Kp'][:, 1:].transpose().copy() if 'Kp' in replay.files else np.tile(params.Kp, (self.N, 4))  # N by 12
+        self.D = replay['Kd'][:, 1:].transpose().copy() if 'Kd' in replay.files else np.tile(params.Kd, (self.N, 4))  # N by 12
         self.FF = np.tile(params.Kff, (self.N, 12))  # N by 12
+        self.tau_sat = params.tau_sat
 
         # Initial positions and torques
         self.q0 = self.q[0, :]
         self.tau0 = self.FF[0, :] * self.tau[0, :]
+
+        self.q_end = params.q_end[7:]
+        self.tau_end = np.zeros(12)
 
 
 def replay_loop():
@@ -49,6 +53,9 @@ def replay_loop():
 
     # INITIALIZATION ***************************************************
     device, logger, qc = initialize(params, replay.q0, replay.tau0, replay.N)
+
+    # PUT ON THE FLOOR
+    put_on_the_floor(device, params, replay.q0, replay.tau0)
 
     # REPLAY LOOP ***************************************************
     k = 0
@@ -72,6 +79,7 @@ def replay_loop():
         device.joints.set_desired_positions(replay.q[k, :])
         device.joints.set_desired_velocities(replay.v[k, :])
         device.joints.set_torques(replay.FF[k, :] * replay.tau[k, :])
+        device.joints.set_tau_sat(replay.tau_sat)
 
         # Call logger if necessary
         if params.LOGGING or params.PLOTTING:
@@ -82,6 +90,9 @@ def replay_loop():
 
         # Increment counter
         k += 1
+
+    # WAIT IN POSITION
+    wait_in_position(device, params, replay.q_end, replay.tau_end)
 
     # DAMPING TO GET ON THE GROUND PROGRESSIVELY *********************
     damping(device, params)

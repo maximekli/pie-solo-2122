@@ -605,6 +605,9 @@ class Joints():
             v_des (12 x 0 array): desired articular velocities
         """
         self.parent.v_des = v_des
+    
+    def set_tau_sat(self, tau_sat):
+        self.parent.tau_sat = tau_sat
 
 class RobotInterface():
     """Dummy class that simulates the robot_interface class used to communicate with the real masterboard"""
@@ -643,6 +646,7 @@ class PyBulletSimulator():
         self.q_des = np.zeros(12)
         self.v_des = np.zeros(12)
         self.tau_ff = np.zeros(12)
+        self.tau_sat = 0.0
 
     def Init(self, calibrateEncoders=False, q_init=None, envID=0, use_flat_plane=True, enable_pyb_GUI=False, dt=0.002):
         """Initialize the PyBullet simultor with a given environment and a given state of the robot
@@ -736,8 +740,18 @@ class PyBulletSimulator():
         tau_pd = self.P * (self.q_des - self.joints.positions) + self.D * (self.v_des - self.joints.velocities)
 
         # Save desired torques in a storage array
-        # TODO: add torque saturation
-        self.jointTorques = tau_pd + self.tau_ff
+        torques = tau_pd + self.tau_ff
+
+        # saturation
+        for i in range(len(torques)):
+            tau = torques[i]
+            if tau > self.tau_sat:
+                tau = self.tau_sat
+            elif tau < -self.tau_sat:
+                tau = -self.tau_sat
+            torques[i] = tau
+        
+        self.jointTorques = torques
 
         # Set control torque for all joints
         pyb.setJointMotorControlArray(self.pyb_sim.robotId, self.pyb_sim.revoluteJointIndices,
