@@ -27,7 +27,7 @@ dt      = 1e-3
 try:
     Q = np.load('Q.npy', allow_pickle=True)
 except OSError:
-    import invers_kinematic
+    import inverse_kinematics
     Q = np.load('Q.npy', allow_pickle=True)
 Q = Q[:-4]
 
