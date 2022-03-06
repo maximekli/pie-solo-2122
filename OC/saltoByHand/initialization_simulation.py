@@ -4,7 +4,6 @@ import numpy as np  # Numpy library
 import pybullet_data
 import pybullet as p  # PyBullet simulator
 from example_robot_data import loadSolo  # Functions to load the SOLO quadruped
-from model_com import g
 
 
 def configure_simulation(dt, enableGUI):
@@ -22,7 +21,7 @@ def configure_simulation(dt, enableGUI):
     # p.DIRECT for non-graphical version
 
     # Set gravity (disabled by default)
-    p.setGravity(0, 0, g[2])
+    p.setGravity(0, 0, solo.model.gravity.linear[2])
 
     # Load horizontal plane for PyBullet
     p.setAdditionalSearchPath(pybullet_data.getDataPath())
