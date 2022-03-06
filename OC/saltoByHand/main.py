@@ -26,9 +26,11 @@ dt      = 1e-3
 
 try:
     Q = np.load('Q.npy', allow_pickle=True)
+    vQ = np.load('vQ.npy', allow_pickle=True)
 except OSError:
     import inverse_kinematics
     Q = np.load('Q.npy', allow_pickle=True)
+    vQ = np.load('vQ.npy', allow_pickle=True)
 Q = Q[:-4]
 
 ################################
@@ -43,7 +45,10 @@ robotId, solo, revoluteJointIndices, torques_ref    = configure_simulation(dt, e
 torques_sat                                         = 3 # N.m
 # t_simu                                              = 0
 
-for i in range(len(Q)+1000):
+print("Click on the link and press any key to begin simulation")
+input()
+
+for i in range(len(Q)+2000):
     # Time at the start of the loop
     if realTimeSimulation:
         t0 = time.perf_counter()
@@ -54,7 +59,8 @@ for i in range(len(Q)+1000):
         Kd      = 0.06
 
         # Joints configuration
-        vq  = np.zeros(q0.size)
+        # vq  = np.zeros(q0.size)
+        vq  = vQ[i]
         q  = Q[i]
         
         # Get position and velocity of all joints in PyBullet (free flying base + motors)
@@ -64,7 +70,7 @@ for i in range(len(Q)+1000):
 
         # Target position and velocity for all joints
         qa_ref      = np.array([q[7:]]).T  # target angular positions for the motors
-        qa_dot_ref  = np.array([vq[7:]]).T  # target angular velocities for the motors
+        qa_dot_ref  = np.array([vq[6:]]).T  # target angular velocities for the motors
 
         # Call controller to get torques for all joints
         jointTorques = PD(qa_ref, qa_dot_ref, qa, qa_dot, dt, Kp, Kd, torques_sat, torques_ref)
@@ -81,6 +87,7 @@ for i in range(len(Q)+1000):
         qa, qa_dot  = getPosVelJoints(robotId, revoluteJointIndices)
         qa          = qa[7:]
         qa_dot      = qa_dot[6:]
+        qa_dot_ref  = np.zeros(qa_dot.shape)
 
         # Call controller to get torques for all joints
         jointTorques = PD(qa_ref, qa_dot_ref, qa, qa_dot, dt, Kp, Kd, torques_sat, torques_ref)

@@ -53,16 +53,18 @@ while T_jump_err>2*dt :
     Tt      = np.sqrt(2*h/abs(g[2])) + T_jump
     f_x     = 2*L*np.sqrt(abs(g[2])/(8*h))/T_jump
     f_z     = np.sqrt(2*abs(g[2])*h)/T_jump + abs(g[2])
-    x_CoM   = lambda t : CoM_0[0]+(f_x*t**2/2 if t<T_jump else f_x*T_jump*(t-T_jump)+f_x*T_jump**2/2)
-    y_CoM   = lambda t : CoM_0[1]
-    z_CoM   = lambda t : CoM_0[2]/2+(f_z*t**2/2 if t<T_jump else f_z*T_jump*(t-T_jump)+f_z*T_jump**2/2) + g[2]*t**2/2
-    X_CoM   = lambda t : np.array([x_CoM(t),y_CoM(t),z_CoM(t)])
+    F       = np.array([f_x, 0, f_z])
+    X_0     = np.array([CoM_0[0], CoM_0[1], CoM_0[2]/2])
+    X_jump  = X_0 + F*T_jump**2/2
+    V_jump  = F*T_jump
+    X_CoM   = lambda t : (X_0 + F*t**2/2 if t<T_jump else X_jump + V_jump*(t-T_jump)) + g*t**2/2
     theta   = lambda t : -rot*t/Tt if t<T_lean \
                         else rot*(t-2*T_lean)/Tt
     Rot_CoM = lambda t : rotMatY(theta(t))
 
     print("PREPARE...")
     Q = []
+    vQ = []
     t = 0
     q = q0.copy()
     max_err = 1
@@ -132,6 +134,7 @@ while T_jump_err>2*dt :
             viz.display(q)
 
         Q.append(q)
+        vQ.append(np.zeros(vq.shape))
         t+=dt
 
     print("AND PUSH!")
@@ -206,6 +209,7 @@ while T_jump_err>2*dt :
             vq += pinv(o_JHLxyz @ PbaseFRFLHR) @ (-o_HLgoal - o_JHLxyz @ vq)
 
             q = pin.integrate(robot.model, q, vq * Dt)
+            if not i : vQ.append(vq)
 
         max_herr = max(herr_base[-1],herr_FR[-1],herr_FL[-1],herr_HR[-1],herr_HL[-1])
         if max_herr<epsilon:
@@ -267,6 +271,7 @@ while True:
         vq += pinv(o_JFLxyz @ PbaseFR) @ (-o_FLgoal - o_JFLxyz @ vq)
 
         q = pin.integrate(robot.model, q, vq * Dt)
+        if not i : vQ.append(vq)
 
     max_herr = max(herr_base[-1],herr_FR[-1],herr_FL[-1])
     if max_herr<epsilon:
@@ -277,3 +282,4 @@ while True:
 
 
 np.save('Q.npy', Q, allow_pickle=True)
+np.save('vQ.npy', vQ, allow_pickle=True)
