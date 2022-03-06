@@ -216,7 +216,9 @@ while T_jump_err>2*dt :
             Q.append(q)
             viz.display(q)
             t+=dt
-        else: break
+        else: 
+            vQ = vQ[:-1]
+            break
         
     T_jump_err = abs(T_jump-t)
     if T_jump_err>2*dt : print(f"T_jump was {T_jump}s but the robot jumped at {t}s.\n")
@@ -278,8 +280,10 @@ while True:
         Q.append(q)
         viz.display(q)
         t+=dt
-    else: break
+    else: 
+        vQ = vQ[:-1]
+        break
 
 
-np.save('Q.npy', Q, allow_pickle=True)
-np.save('vQ.npy', vQ, allow_pickle=True)
+np.save('ik_Q.npy', Q, allow_pickle=True)
+np.save('ik_vQ.npy', vQ, allow_pickle=True)
