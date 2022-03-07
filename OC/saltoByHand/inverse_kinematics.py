@@ -130,7 +130,7 @@ while T_jump_err>2*dt :
             PbaseFRFLHR = PbaseFRFL - pinv(o_JHRxyz @ PbaseFRFL) @ o_JHRxyz @ PbaseFRFL
             vq += pinv(o_JHLxyz @ PbaseFRFLHR) @ (-o_HLgoal - o_JHLxyz @ vq)
 
-            q = pin.integrate(robot.model, q, vq * Dt)
+            q = pin.integrate(robot.model, q, 0.5*vq * Dt)
             viz.display(q)
 
         Q.append(q)

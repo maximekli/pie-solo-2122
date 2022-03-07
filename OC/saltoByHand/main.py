@@ -58,14 +58,14 @@ torques_sat                                             = 3 # N.m
 print("Click on the link and press any key to begin simulation")
 input()
 
+# Parameters for the PD controller
+Kp  = 0 if isTorquesRef else 8
+Kd  = 0 if isTorquesRef else 0.06
 
 for i in range(len(Q)+2000):
     # Time at the start of the loop
     if realTimeSimulation:
         t0 = time.perf_counter()
-    # Parameters for the PD controller
-    Kp  = 0 if isTorquesRef else 8
-    Kd  = 0 if isTorquesRef else 0.06
     
     # Get position and velocity of all joints in PyBullet (free flying base + motors)
     qa, qa_dot  = getPosVelJoints(robotId, revoluteJointIndices)
@@ -85,6 +85,9 @@ for i in range(len(Q)+2000):
         torques_ref = torques[i] if isTorquesRef else zero_torques_ref
     else : 
         ''' GO BACK TO INITIALIZED POSITION '''
+        # Parameters for the PD controller
+        Kp          = 0 if isTorquesRef else 3
+        Kd          = 0 if isTorquesRef else 0.3
         vq          = np.zeros(vq.shape)
         q           = q0
         torques_ref = torques[i] if isTorquesRef else zero_torques_ref
@@ -117,5 +120,5 @@ for i in range(len(Q)+2000):
 p.disconnect()
 
 np.save('trajectory_npy/salto_Q.npy', salto_Q, allow_pickle=True)
-np.save('trajectory_npy/salto_vQ.npy', salto_Q, allow_pickle=True)
+np.save('trajectory_npy/salto_vQ.npy', salto_vQ, allow_pickle=True)
 if not isTorquesRef : np.save('trajectory_npy/salto_torques.npy', salto_torques, allow_pickle=True)
