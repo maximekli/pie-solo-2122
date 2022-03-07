@@ -11,13 +11,13 @@ import example_robot_data
 
 from PD import PD
 from initialization_simulation import configure_simulation, getPosVelJoints # Functions to initialize the simulation and retrieve joints positions/velocities
-# from inverse_kinematics import *
 
 robot   = example_robot_data.load('solo12')
+
+# Initial position
 q0      = robot.q0.copy()
-q0[7]   = 0
-q0[10]   = 0
 q0[7:13]= q0[13:]
+# Simulation dt
 dt      = 1e-3
 
 ####################################
@@ -25,27 +25,35 @@ dt      = 1e-3
 ####################################
 
 try:
-    Q = np.load('ik_Q.npy', allow_pickle=True)
-    vQ = np.load('ik_vQ.npy', allow_pickle=True)
+    Q = np.load('trajectory_npy/ik_Q.npy', allow_pickle=True)
+    vQ = np.load('trajectory_npy/ik_vQ.npy', allow_pickle=True)
 except OSError:
     import inverse_kinematics
-    Q = np.load('ik_Q.npy', allow_pickle=True)
-    vQ = np.load('ik_vQ.npy', allow_pickle=True)
-Q = Q[:-4]
-vQ = vQ[:-4]
-salto_Q = []
-salto_vQ = []
+    Q = np.load('trajectory_npy/ik_Q.npy', allow_pickle=True)
+    vQ = np.load('trajectory_npy/ik_vQ.npy', allow_pickle=True)
+Q   = Q[:-4]
+vQ  = vQ[:-4]
+
+try:
+    torques = np.load('trajectory_npy/salto_torques.npy', allow_pickle=True)
+    isTorquesRef = True
+except OSError:
+    isTorquesRef = False
+    
+salto_Q         = []
+salto_vQ        = []
+salto_torques   = []
+
 ################################
 #  INITIALIZATION SIMULATION  ##
 ################################
     
 # If True then we will sleep in the main loop to have a 1:1 ratio of (elapsed real time / elapsed time in the
 # simulation)
-realTimeSimulation                                  = True  # If True then we will sleep in the main loop to have a frequency of 1/dt
-enableGUI                                           = True  # enable PyBullet GUI or not
-robotId, solo, revoluteJointIndices, torques_ref    = configure_simulation(dt, enableGUI)
-torques_sat                                         = 3 # N.m
-# t_simu                                              = 0
+realTimeSimulation                                      = True  # If True then we will sleep in the main loop to have a frequency of 1/dt
+enableGUI                                               = True  # enable PyBullet GUI or not
+robotId, solo, revoluteJointIndices, zero_torques_ref   = configure_simulation(dt, enableGUI)
+torques_sat                                             = 3 # N.m
 
 print("Click on the link and press any key to begin simulation")
 input()
@@ -55,80 +63,43 @@ for i in range(len(Q)+2000):
     # Time at the start of the loop
     if realTimeSimulation:
         t0 = time.perf_counter()
+    # Parameters for the PD controller
+    Kp  = 0 if isTorquesRef else 8
+    Kd  = 0 if isTorquesRef else 0.06
+    
+    # Get position and velocity of all joints in PyBullet (free flying base + motors)
+    qa, qa_dot  = getPosVelJoints(robotId, revoluteJointIndices)
+    qa          = qa[7:]
+    qa_dot      = qa_dot[6:]
 
+    # Joints configuration
     if i < len(Q) :
-        # Parameters for the PD controller
-        Kp      = 8
-        Kd      = 0.06
-        
-        # Get position and velocity of all joints in PyBullet (free flying base + motors)
-        qa, qa_dot  = getPosVelJoints(robotId, revoluteJointIndices)
-        qa          = qa[7:]
-        qa_dot      = qa_dot[6:]
-
-        # Joints configuration
-        vq  = vQ[i]
-        q  = Q[i]
-        salto_vQ.append(vq)
-        salto_Q.append(q)
-
-        # Target position and velocity for all joints
-        qa_ref      = np.array([q[7:]]).T  # target angular positions for the motors
-        qa_dot_ref  = np.array([vq[6:]]).T  # target angular velocities for the motors
-
-        # Call controller to get torques for all joints
-        jointTorques = PD(qa_ref, qa_dot_ref, qa, qa_dot, dt, Kp, Kd, torques_sat, torques_ref)
-        # jointTorques = c_salto_IK(qa, qa_dot, dt, robot, t_simu)
-        # t_simu += dt
-
-    # ''' STAY IN POSITION '''
+        ''' JUMP '''
+        vq          = vQ[i]
+        q           = Q[i]
+        torques_ref = torques[i] if isTorquesRef else zero_torques_ref
     elif i < len(Q) + 500 :
-        # Parameters for the PD controller
-        Kp      = 8
-        Kd      = 0.06
-
-        # Get position and velocity of all joints in PyBullet (free flying base + motors)
-        qa, qa_dot  = getPosVelJoints(robotId, revoluteJointIndices)
-        qa          = qa[7:]
-        qa_dot      = qa_dot[6:]
-
-        # Joints configuration
-        vq      = np.zeros(vq.shape)
-        q       = q
-        salto_vQ.append(vq)
-        salto_Q.append(q)
-
-        # Target position and velocity for all joints
-        qa_ref      = np.array([q[7:]]).T  # target angular positions for the motors
-        qa_dot_ref  = np.array([vq[6:]]).T  # target angular velocities for the motors
-
-
-        # Call controller to get torques for all joints
-        jointTorques = PD(qa_ref, qa_dot_ref, qa, qa_dot, dt, Kp, Kd, torques_sat, torques_ref)
-
-    # ''' GO BACK TO INITIALIZED POSITION '''
+        ''' STAY IN POSITION '''
+        vq          = np.zeros(vq.shape)
+        q           = q
+        torques_ref = torques[i] if isTorquesRef else zero_torques_ref
     else : 
-        # Parameters for the PD controller
-        Kp      = 8
-        Kd      = 0.06
+        ''' GO BACK TO INITIALIZED POSITION '''
+        vq          = np.zeros(vq.shape)
+        q           = q0
+        torques_ref = torques[i] if isTorquesRef else zero_torques_ref
 
-        # Get position and velocity of all joints in PyBullet (free flying base + motors)
-        qa, qa_dot  = getPosVelJoints(robotId, revoluteJointIndices)
-        qa          = qa[7:]
-        qa_dot      = qa_dot[6:]
+    # Target position and velocity for all joints
+    qa_ref      = np.array([q[7:]]).T  # target angular positions for the motors
+    qa_dot_ref  = np.array([vq[6:]]).T  # target angular velocities for the motors
 
-        # Joints configuration
-        vq      = np.zeros(vq.shape)
-        q       = q0
-        salto_vQ.append(np.zeros(vq.shape))
-        salto_Q.append(q0)
-
-        # Target position and velocity for all joints
-        qa_ref      = np.array([q[7:]]).T  # target angular positions for the motors
-        qa_dot_ref  = np.array([vq[6:]]).T  # target angular velocities for the motors
-
-        # Call controller to get torques for all joints
-        jointTorques = PD(qa_ref, qa_dot_ref, qa, qa_dot, dt, Kp, Kd, torques_sat, torques_ref)
+    # Call controller to get torques for all joints
+    jointTorques = PD(qa_ref, qa_dot_ref, qa, qa_dot, dt, Kp, Kd, torques_sat, torques_ref)
+    
+    # Store control parameters
+    salto_vQ.append(vq)
+    salto_Q.append(q)
+    salto_torques.append(jointTorques)
 
     # Set control torques for all joints in PyBullet
     p.setJointMotorControlArray(robotId, revoluteJointIndices, controlMode=p.TORQUE_CONTROL, forces=jointTorques)
@@ -145,5 +116,6 @@ for i in range(len(Q)+2000):
 # Shut down the PyBullet client
 p.disconnect()
 
-np.save('salto_Q.npy', Q, allow_pickle=True)
-np.save('salto_vQ.npy', vQ, allow_pickle=True)
+np.save('trajectory_npy/salto_Q.npy', salto_Q, allow_pickle=True)
+np.save('trajectory_npy/salto_vQ.npy', salto_Q, allow_pickle=True)
+if not isTorquesRef : np.save('trajectory_npy/salto_torques.npy', salto_torques, allow_pickle=True)

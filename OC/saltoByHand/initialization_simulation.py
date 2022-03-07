@@ -7,7 +7,6 @@ from example_robot_data import loadSolo  # Functions to load the SOLO quadruped
 
 
 def configure_simulation(dt, enableGUI):
-    global jointTorques
     # Load the robot for Pinocchio
     solo = loadSolo(False)
     solo.initDisplay(loadModel=True)

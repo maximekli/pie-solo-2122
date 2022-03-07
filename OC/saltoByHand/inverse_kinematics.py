@@ -10,15 +10,15 @@ robot = example_robot_data.load('solo12')
 viz = MeshcatVisualizer(robot)
 
 
+# Initial position
 q0      = robot.q0.copy()
-q0[7]   = 0
-q0[10]   = 0
 q0[7:13]= q0[13:]
 CoM_0   = robot.com(q0).copy()
+
 g       = robot.model.gravity.linear
 
-Dt      = 1e-2
-dt      = 1e-3
+Dt      = 1e-2 # IK Dt
+dt      = 1e-3 # Simulation dt
 tuning1 = 2.4
 tuning2 = 1.08
 L       = tuning1*1
@@ -285,5 +285,5 @@ while True:
         break
 
 
-np.save('ik_Q.npy', Q, allow_pickle=True)
-np.save('ik_vQ.npy', vQ, allow_pickle=True)
+np.save('trajectory_npy/ik_Q.npy', Q, allow_pickle=True)
+np.save('trajectory_npy/ik_vQ.npy', vQ, allow_pickle=True)
