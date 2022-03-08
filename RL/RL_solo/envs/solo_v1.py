@@ -17,13 +17,13 @@ path = os.path.dirname(os.path.abspath(__file__))
 class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def __init__(
         self,
-        xml_file= path + "/../models/solo_description/robots/solo12.xml",
+        xml_file= path + "/../models/solo_description/robots/solo12.xml",#"/../models/solo_description/robots/half_cheetah.xml",
         ctrl_cost_weight=1e-3,
         healthy_reward=0.1,
         terminate_when_unhealthy=True,
         healthy_state_range=(-1000.0, 1000.0),
         healthy_z_range=(-0.3, float("inf")),
-        reset_noise_scale=5e-2,
+        reset_noise_scale=5e-3,
         exclude_current_positions_from_observation=False,
     ):
         utils.EzPickle.__init__(**locals())
@@ -91,11 +91,16 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
 
         #print(z)
         #if healthy_z :
-            #print("healthy_z: ", healthy_z)
+            #print("healthy_10z: ", healthy_z)
             #print("healthy_joints_pos: ", healthy_joints_pos)
             #print("healthy_joints_vel: ", healthy_joints_vel)
 
-        is_healthy = all((healthy_state, healthy_z))
+        penetration_margin = - 0.5
+        penetration_state = [self.sim.data.contact[i].dist > penetration_margin for i in range(self.sim.data.ncon)]
+
+        is_healthy = all((healthy_state, healthy_z, all(penetration_state)))
+
+
 
         return is_healthy
 
@@ -143,18 +148,40 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
         yaw_z = math.atan2(t3, t4)
      
         return roll_x, pitch_y, yaw_z
+    
+    def _print_floor_contacts(self):
+        print('number of contacts', self.sim.data.ncon)
+        for i in range(self.sim.data.ncon):
+            contact = self.sim.data.contact[i]
+            geom1_name = self.sim.model.geom_id2name(contact.geom1)
+            geom2_name = self.sim.model.geom_id2name(contact.geom2)
+            if (geom1_name == 'floor' or geom2_name == 'floor'):
+                print('contact', i)
+                print('dist', contact.dist)
+                print('geom1', contact.geom1, geom1_name)
+                print('geom2', contact.geom2, geom2_name)
+                geom1_body = self.sim.model.geom_bodyid[self.sim.data.contact[i].geom1]
+                print(' Contact force on geom1 body', self.sim.data.cfrc_ext[geom1_body])
+        
 
     def _compute_reward(self):
         jump_reward = 0
 
         ## REWARD BASED ON THE PITCH ANGLE OF THE BASE 
+        backroll_angle = - self.sim.data.qpos[2]  # rooty - angle (rad)
         backroll = - self.sim.data.qvel[2]  # rooty - angular velocity (rad/s)
         height = self.sim.data.qpos[1]  # rootz - position (m)
         backslide = - self.sim.data.qvel[0]  # rootx - velocity (m/s)
+        backslide_position = - self.sim.data.qpos[0]  # rootx - position (m)
 
-        #jump_reward = -self.sim.data.qpos[2]*180/(2*math.pi)
-        jump_reward = backroll * (1.0 + .3 * height + .05 * backslide) #+ .1 * vel_act
-        #roll, pitch, yaw = self._euler_from_quaternion(quat)
+        # Deep Mind Reward
+        # jump_reward = backroll * (1.0 + .3 * height + .05 * backslide)
+
+        # Backflip Reward
+        if height >0:
+            jump_reward = 30 * (backroll_angle * height + backroll * self.sim.data.qvel[1])
+        if backroll_angle == 2*np.pi:
+            jump_reward += 100
 
         rewards = jump_reward + self.healthy_reward
         return rewards
