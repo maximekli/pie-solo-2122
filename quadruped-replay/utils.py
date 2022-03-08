@@ -21,8 +21,10 @@ def put_on_the_floor(device, params, q_init, tau_init):
 
     print("PUT ON THE FLOOR.")
 
-    Kp_pos = 8.
-    Kd_pos = 0.06
+    Kp_pos = 3.
+    Kd_pos = 0.3
+    # Kp_pos = 8.
+    # Kd_pos = 0.06
 
     device.joints.set_position_gains(Kp_pos * np.ones(12))
     device.joints.set_velocity_gains(Kd_pos * np.ones(12))

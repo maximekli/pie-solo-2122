@@ -92,7 +92,7 @@ def replay_loop():
         k += 1
 
     # WAIT IN POSITION
-    wait_in_position(device, params, replay.q0, replay.tau_end)
+    wait_in_position(device, params, replay.q_end, replay.tau_end)
 
     # DAMPING TO GET ON THE GROUND PROGRESSIVELY *********************
     damping(device, params)
