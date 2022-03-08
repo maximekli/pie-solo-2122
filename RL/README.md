@@ -1,6 +1,13 @@
 # pie-solo-2122
 
-This folder contains all the software work and documentation associated with the reinforcement learning 5RL) part of the 2021-2022 PIE on Solo quadruped platform. 
+This folder contains all the software work and documentation associated with the reinforcement learning (RL) part of the 2021-2022 PIE on Solo quadruped platform. 
+
+## Description
+
+This part of the project aims to enable the quadruped robot Solo to perform backflips after learning it in simulation through reinforcement learning. The package RL_solo contains:
+- the description of the robot needed for simulation in MuJoCo
+- a OpenAI Gym environment to train the robot
+- the RL algorithm and configurations, used to train the robot
 
 ## Installation
 
