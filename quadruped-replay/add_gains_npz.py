@@ -2,7 +2,7 @@ import sys
 
 import numpy as np
 
-if len(sys.argv) != 3:
+if len(sys.argv) != 2:
     quit()
 
 dt = 1e-3
@@ -12,16 +12,16 @@ Kp_0 = 6.0
 Kd_0 = 0.3
 
 # lighter gains
-Kp_1 = 3.0
-Kd_1 = 0.3
+Kp_1 = 0.6
+Kd_1 = 0.17
+
+index = 10
 
 npzfile = np.load(sys.argv[1])
 q = npzfile['q']
 v = npzfile['v']
 tau = npzfile['tau']
 t = npzfile['t']
-
-index = int(sys.argv[2])
 
 Kp = np.zeros((12, tau.shape[1]))
 Kp[:, :index] = np.full((tau.shape[0], index), Kp_0)
