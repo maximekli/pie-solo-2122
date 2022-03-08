@@ -89,5 +89,6 @@ def training():
         logger_kwargs=logger_kwargs,
         logger_obs_ac_args=logger_obs_ac_args, 
         save_freq=save_freq,
-        symmetry=True)
+        symmetry=True,
+        load=False)
     env.close()
