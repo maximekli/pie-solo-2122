@@ -1,4 +1,4 @@
-# pie-solo-2122
+# pie-solo-2122 - Reinforcement Learning Trajectories
 
 This folder contains all the software work and documentation associated with the reinforcement learning (RL) part of the 2021-2022 PIE on Solo quadruped platform. 
 
