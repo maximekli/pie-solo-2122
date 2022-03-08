@@ -16,7 +16,11 @@ class Params():
         # self.replay_path = 'padded.converted.trimmed.half_backflip.npz'
         # self.replay_path = 'with_gains.padded.converted.trimmed.simple_jumping.npz'
         # self.replay_path = 'with_gains.padded.converted.trimmed.yaw_jumping.npz'
-        self.replay_path = 'with_gains.padded.converted.trimmed.half_backflip.npz'
+        # self.replay_path = 'with_gains.padded.converted.trimmed.half_backflip.npz'
+        self.replay_path = 'backflip_by_hand.npz'
+        # self.replay_path = 'with_gains.padded.converted.trimmed.half_backflip.npz'
+        # self.replay_path = 'backflip_by_hand.npz'
+        self.replay_path = 'with_gains.backflip_by_hand.npz'
         self.SIMULATION = True  # Run the replay in simulation if True
         self.LOGGING = False  # Save the logs of the experiments if True
         self.PLOTTING = False  # Plot the logs of the experiments if True
@@ -46,4 +50,5 @@ class Params():
         self.q_end = solo_q0_flipped if 'half_backflip' in self.replay_path else solo_q0
 
         # Torque saturation
-        self.tau_sat = 2.5 # N.m
+        self.tau_sat = 3 # N.m
+        # self.tau_sat = 2.5 # N.m
