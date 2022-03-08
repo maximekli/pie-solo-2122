@@ -17,7 +17,7 @@ path = os.path.dirname(os.path.abspath(__file__))
 class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     def __init__(
         self,
-        xml_file= path + "/../models/solo_description/robots/solo12.xml",#"/../models/solo_description/robots/half_cheetah.xml",
+        xml_file= path + "/../models/solo_description/robots/solo12.xml",
         ctrl_cost_weight=1e-3,
         healthy_reward=0.1,
         terminate_when_unhealthy=True,
@@ -60,19 +60,15 @@ class SoloEnv(mujoco_env.MujocoEnv, utils.EzPickle):
     @property
     def is_healthy(self):
         """
-            qpos =  x,y,z,
-                    quaternion for body orientation,
+            qpos =  x linear position,z linear position,y angular position,
                     joints angles,
-            qvel =  vx,vy,vz,
-                    roll, pitch, yaw,
+            qvel =  vx linear velocity,vz linear velocity,vy angular velocity,
                     joints angular velocity
         """
         #pos_body = self.sim.data.qpos[:3]
-        #orientation = self.sim.data.qpos[3:7]
-        #pos_joints = self.sim.data.qpos[7:]
+        #pos_joints = self.sim.data.qpos[3:]
         #vel_body = self.sim.data.qvel[:3]
-        #rot_body = self.sim.data.qvel[3:6]
-        #vel_joints = self.sim.data.qvel[6:]
+        #vel_joints = self.sim.data.qvel[3:]
 
         state = self.state_vector()
         #print(state)
