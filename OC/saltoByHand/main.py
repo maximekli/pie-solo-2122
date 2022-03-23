@@ -14,16 +14,20 @@ from initialization_simulation import configure_simulation, getPosVelJoints # Fu
 
 robot   = example_robot_data.load('solo12')
 
+
 # Initial position
+# The same as in inverse_kinematics.py
 q0      = robot.q0.copy()
 q0[7:13]= q0[13:]
 # Simulation dt
 dt      = 1e-3
 
+# Force symmetry for configurations: no change in the simulation
+SYMMETRIC = False
+
 ####################################
 #  LOAD CONFIGURATION TRAJECTORY  ##
 ####################################
-
 try:
     Q = np.load('trajectory_npy/ik_Q.npy', allow_pickle=True)
     vQ = np.load('trajectory_npy/ik_vQ.npy', allow_pickle=True)
@@ -36,7 +40,7 @@ vQ  = vQ[:-4]
 
 try:
     torques = np.load('trajectory_npy/salto_torques.npy', allow_pickle=True)
-    isTorquesRef = True
+    isTorquesRef = True # can do feed-forward (not successfully implemented)
 except OSError:
     isTorquesRef = False
     
@@ -95,6 +99,17 @@ for i in range(len(Q)+2000):
     # Target position and velocity for all joints
     qa_ref      = np.array([q[7:]]).T  # target angular positions for the motors
     qa_dot_ref  = np.array([vq[6:]]).T  # target angular velocities for the motors
+
+    if SYMMETRIC :
+        # Force symmetry: no change in the simulation
+        '''
+        qa[0:6,0]   -> gauche
+        qa[6:12,0]  -> droite
+        '''
+        # qa_ref[0:6]         = qa_ref[6:12]
+        # qa_dot_ref[0:6]     = qa_dot_ref[6:12]
+        qa_ref[6:12]        = qa_ref[0:6]
+        qa_dot_ref[6:12]    = qa_dot_ref[0:6]
 
     # Call controller to get torques for all joints
     jointTorques = PD(qa_ref, qa_dot_ref, qa, qa_dot, dt, Kp, Kd, torques_sat, torques_ref)

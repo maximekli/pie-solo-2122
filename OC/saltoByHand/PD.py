@@ -3,7 +3,7 @@
 # Load modules
 import numpy as np
 
-
+# Proportionel Dérivé avec saturation (torques_sat) et/ou feed-forward (torques_ref)
 def PD(qa_ref, qa_dot_ref, qa, qa_dot, dt, Kp=1, Kd=1, torques_sat=5*np.ones((8, 1)), torques_ref=np.zeros((8, 1))):
 
     # Output torques

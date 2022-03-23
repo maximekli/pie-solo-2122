@@ -8,7 +8,7 @@ from example_robot_data import loadSolo  # Functions to load the SOLO quadruped
 
 def configure_simulation(dt, enableGUI):
     # Load the robot for Pinocchio
-    solo = loadSolo(False)
+    solo = loadSolo(False) # Solo12
     solo.initDisplay(loadModel=True)
 
     # Start the client for PyBullet
