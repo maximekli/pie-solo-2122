@@ -8,21 +8,9 @@ class Params():
         # self.replay_path = 'converted.simple_jumping.npz'
         # self.replay_path = 'converted.yaw_jumping.npz'
         # self.replay_path = 'converted.half_backflip.npz'
-        # self.replay_path = 'converted.trimmed.simple_jumping.npz'
-        # self.replay_path = 'converted.trimmed.yaw_jumping.npz'
-        # self.replay_path = 'converted.trimmed.half_backflip.npz'
-        # self.replay_path = 'padded.converted.trimmed.simple_jumping.npz'
-        # self.replay_path = 'padded.converted.trimmed.yaw_jumping.npz'
-        # self.replay_path = 'padded.converted.trimmed.half_backflip.npz'
-        # self.replay_path = 'with_gains.padded.converted.trimmed.simple_jumping.npz'
-        # self.replay_path = 'with_gains.padded.converted.trimmed.yaw_jumping.npz'
-        # self.replay_path = 'with_gains.padded.converted.trimmed.half_backflip.npz'
-        # self.replay_path = 'backflip_by_hand.npz'
-        # self.replay_path = 'with_gains.backflip_by_hand.npz'
         # self.replay_path = 'with_gains.trimmed_padded.converted.simple_jumping.npz'
-        # self.replay_path = 'with_gains.trimmed_padded.converted.yaw_jumping.npz'
-        #self.replay_path = 'with_gains.trimmed_padded.converted.half_backflip.npz'
-        self.replay_path = 'with_gains.trimmed_padded.converted.half_backflip_feet.npz'
+        self.replay_path = 'with_gains.trimmed_padded.converted.yaw_jumping.npz'
+
         self.SIMULATION = True  #  Run the replay in simulation if True
         self.LOGGING = False  #  Save the logs of the experiments if True
         self.PLOTTING = False  #  Plot the logs of the experiments if True
