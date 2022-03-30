@@ -1,0 +1,15 @@
+zipp
+typing-extensions
+lockfile
+importlib-resources
+importlib-metadata
+cloudpickle
+scipy
+pyglet
+opencv-python
+lz4
+gym
+box2d-py
+ale-py
+pyyaml
+torch

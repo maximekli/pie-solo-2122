@@ -1,0 +1,4 @@
+meshcat_viewer_wrapper/__pycache__/
+trajectory_npy/*
+trajectory_npz/*
+__pycache__/

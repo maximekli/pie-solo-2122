@@ -1,0 +1,7 @@
+            simpleJumping   yawJumping  halfBackflip
+spring      50
+pushing     35
+rising      20
+atTheTop    1
+falling     20
+landed      1
