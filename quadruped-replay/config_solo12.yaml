@@ -1,0 +1,47 @@
+robot:
+    interface: enp2s0
+    joint_modules:
+        motor_numbers: [0, 3, 2, 1, 5, 4, 6, 9, 8, 7, 11, 10]
+        motor_constants: 0.025
+        gear_ratios: 9.
+        max_currents: 12.
+        reverse_polarities: [
+            true, true, true, false, false, false,
+            true, true, true, false, false, false
+        ]
+        lower_joint_limits: [
+            -1.2, -1.3, -3.0, -1.2, -1.3, -3.0,
+            -1.2, -1.3, -3.0, -1.2, -1.3, -3.0
+        ]
+        upper_joint_limits: [
+            1.2,  1.3, +3.0, +1.2, +1.3, +3.0,
+            1.2,  1.3, +3.0, +1.2, +1.3, +3.0
+        ]
+        max_joint_velocities: 80.
+        safety_damping: 0.5
+    imu:
+        rotate_vector: [1, 2, 3]
+        orientation_vector: [-4, 3, -2, 1]
+joint_calibrator:
+    # Can be either POS, NEG, ALT or AUTO
+    search_methods: [
+      AUTO, AUTO, AUTO, AUTO, AUTO, AUTO,
+      AUTO, AUTO, AUTO, AUTO, AUTO, AUTO
+    ]
+    position_offsets: [
+         0.15402414, -0.09870325, -0.04224743,
+        -0.19893768,  0.28213933,  0.07875716,
+        -0.19412552,  0.24585785,  0.22714814,
+         0.24258002, -0.10206669,  0.38732857
+    ]
+    calib_order: [1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0]
+    calib_pos: [
+        0.0,  1.2, -2.4,
+        0.0,  1.2, -2.4,
+        0.0, -1.2,  2.4,
+        0.0, -1.2,  2.4
+    ]
+    Kp: 1.
+    Kd: 0.05
+    T: 1.
+    dt: 0.002
