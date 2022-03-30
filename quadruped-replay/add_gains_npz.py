@@ -12,10 +12,10 @@ Kp_0 = 6.0
 Kd_0 = 0.3
 
 # lighter gains
-Kp_1 = 0.6
-Kd_1 = 0.17
+Kp_1 = 1.5
+Kd_1 = 0.1
 
-index = 10
+index = 1060
 
 npzfile = np.load(sys.argv[1])
 q = npzfile['q']
