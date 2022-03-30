@@ -5,7 +5,10 @@ robot   = example_robot_data.load('solo12')
 directory = 'trajectory_npz/'
 file = 'backflip_by_hand.npz'
 
+
+
 # Initial position
+# The same as in inverse_kinematics.py
 q0      = robot.q0.copy()
 q0[7:13]= q0[13:]
 dt = 1e-3
@@ -15,7 +18,7 @@ print(f'q shape : {q.shape}')
 v = np.load('trajectory_npy/salto_vQ.npy').transpose()
 print(f'v shape : {v.shape}')
 tau = np.zeros((12, q.shape[1]))
-# tau = np.load('trajectory_npy/salto_torques.npy').transpose()[0]
+# tau = np.load('trajectory_npy/salto_torques.npy').transpose()[0] # feed-forward (not successfully implemented here)
 print(f'tau shape : {tau.shape}')
 
 t = [i * dt for i in range(q.shape[1])]
